@@ -1,0 +1,28 @@
+{
+    "files.associations": {
+        "types.h": "c",
+        "bpf_helpers.h": "c",
+        "bpf_core_read.h": "c",
+        "ptrace.h": "c",
+        "vmlinux.h": "c",
+        "bpf_tracing.h": "c",
+        "*.tcc": "c",
+        "bpf.h": "c",
+        "array": "c",
+        "chrono": "c",
+        "functional": "c",
+        "istream": "c",
+        "ostream": "c",
+        "ratio": "c",
+        "tuple": "c",
+        "type_traits": "c",
+        "utility": "c",
+        "string": "c",
+        "string_view": "c",
+        "random": "c",
+        "algorithm": "c",
+        "map": "c",
+        "optional": "c",
+        "system_error": "c"
+    }
+}
