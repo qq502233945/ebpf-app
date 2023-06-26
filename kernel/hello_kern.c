@@ -552,7 +552,7 @@ static __always_inline uint16_t vring_avail_ring() // To get the head vring
 
 static __always_inline bool copy_vq(int num, __u64 *idx, __u64 *used, __u64 *ava_idx)
 {
-	__u64 vq_addr = 0x55A2E2364170;
+	__u64 vq_addr = 0x5585b05397e0;
 
 	__u64 addr = vq_addr + num * 0x98;
 	uint32_t ret = 0;
@@ -600,15 +600,28 @@ static inline uint16_t vring_avail_idx(struct VirtQueue *vq)
 static __always_inline void vring_set_avail_event(struct VirtQueue *vq, struct Useraddr *user)
 {
 	uint16_t shadow_avail_idx;
+	struct VRMRC *caches;
+	uint32_t arr_num;
+	arr_num = 0;
 	int ret = 0;
 	shadow_avail_idx = vring_avail_idx(vq);
-	if(shadow_avail_idx!=0)
+	caches = bpf_map_lookup_elem(&VRMRC, &arr_num);
+
+    
+	if(caches)
 	{
 		ret = bpf_probe_write_user(user->shadow_avail_idx, &shadow_avail_idx, sizeof(uint16_t));
 		if(ret<0)
 		{
 			bpf_printk("set shadow_avail_idx failure\n");
 		}
+		hwaddr pa = offsetof(VRingUsed, ring[vq->vring.num]);
+		ret = bpf_probe_write_user(user->vring_used + pa, &shadow_avail_idx, sizeof(uint16_t));
+		if(ret<0)
+		{
+			bpf_printk("update the vring used_idxerror!\n");
+		}
+
 	}
 }
 
@@ -653,7 +666,7 @@ int bpf_prog(struct pt_regs *ctx)
 		{
 			ret = (addr - 0xfe003000) / 4;
 			// get the vq to be operated
-
+			
 			//also save the last_avail_idx and used_idx addr used to update
 			copy_vq(ret, &user->last_avail_idx, &user->used_idx, &user->shadow_avail_idx);
 			// copy the desc from the head vring
@@ -751,13 +764,13 @@ int bpf_prog(struct pt_regs *ctx)
 				{
 					result->iovec[1].iov_base = iov->iov_base;
 					result->iovec[1].iov_len = iov->iov_len;
-					// if (iov->iov_len == 512)
-					// 	result->fd = 22;
-					// else
-					// {
-					// 	result->fd = 0;
-					// 	return 0;
-					// }
+					if (iov->iov_len == 512)
+						result->fd = 22;
+					else
+					{
+						result->fd = 0;
+						return 0;
+					}
 
 					result->addr[1] = *add;
 					bpf_printk("iov base is %lx: len is %u\n", result->iovec[1].iov_base, iov->iov_len);
@@ -770,9 +783,9 @@ int bpf_prog(struct pt_regs *ctx)
 					result->iovec[2].iov_base = iov->iov_base;
 					result->iovec[2].iov_len = iov->iov_len;
 					result->addr[2] = *add;
-					bpf_printk("iov base is %lx: len is %u\n", result->iovec[2].iov_base, iov->iov_len);
+					// bpf_printk("iov base is %lx: len is %u\n", result->iovec[2].iov_base, iov->iov_len);
 				}
-				result->fd = 0;
+				// result->fd = 0;
 				result->wfd = vq->guest_notifier.wfd;
 
 				
@@ -792,12 +805,12 @@ static __always_inline uint16_t vring_used_idx_set(struct Useraddr *user, uint16
 	int ret = 0;
 	struct VRMRC *caches;
 	caches = bpf_map_lookup_elem(&VRMRC, &ret);
-	bpf_printk("the vring_used addr is %lx, used_idx is %lx", user->vring_used , user->used_idx);
+	
 	if (caches)
 	{
 		if (caches->used.len != 0)
 		{
-			hwaddr pa = offsetof(VRingUsed, flags);
+			hwaddr pa = offsetof(VRingUsed, idx);
 			ret = bpf_probe_write_user(user->vring_used + pa, &val, sizeof(val));
 			if(ret<0)
 			{
@@ -854,7 +867,7 @@ int bpf_get_idx_ret(struct pt_regs *ctx)
 	if (vq && result && user && vdev)
 	{
 		// bpf_printk("vq used idx is %u\n", vq->used_idx);
-		bpf_printk("ret  is %u\n", off);
+		// 
 		if (off == 1111)
 		{
 			last_avail_idx = vq->last_avail_idx + 1;
@@ -865,29 +878,23 @@ int bpf_get_idx_ret(struct pt_regs *ctx)
 				bpf_printk("update the last_avail_idx error!\n");
 			}
 			vring_set_avail_event(vq,user);
-
-			bpf_printk("ret back!\n");
 			idx = vq->used_idx % vq->vring.num;
 			uelem.id = result->head;
 			uelem.len = 578;
 			hwaddr pa = offsetof(VRingUsed, ring[idx]);
+			// bpf_printk("ebpf\n");
 			ret = bpf_probe_write_user(user->vring_used + pa, &uelem, sizeof(VRingUsedElem));
 			if(ret<0)
 			{
 				bpf_printk("update the vring used_idxerror!\n");
 			}
-			bpf_printk("user->vring_used addr is %lx, pa is %lu\n", user->vring_used, pa);
 			new = vq->used_idx + 1;
+			
 			vring_used_idx_set(user, new);
 
 			virtio_set_isr(vdev,user, 0x1);
 		}
-		// else
-		// {
-		// 	bpf_printk("used_idx addr is %lx, last_avail_idx addr is %lx, \
-		// 		caches_used addr is %lx\n", \
-		// 		user->used_idx, user->last_avail_idx,user->caches_used);
-		// }
+
 	}
 	return 0;
 }
