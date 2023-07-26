@@ -215,10 +215,15 @@ static int64_t ringbuf_process_ring(struct ring* r)
 	do {
 		got_new_data = false;
 		prod_pos = smp_load_acquire(r->producer_pos);
+		if(prod_pos - cons_pos>4096*3000)
+		{
+			printf("too slow!\n");
+		}
 		while (cons_pos < prod_pos) {
 			len_ptr = r->data + (cons_pos & r->mask);
 			len = smp_load_acquire(len_ptr);
 
+			// printf("here 2, len is %u\n",len);
 			/* sample not committed yet, bail out for now */
 			if (len & BPF_RINGBUF_BUSY_BIT)
 				goto done;
@@ -254,10 +259,8 @@ int ring_buffer__consume(struct ring_buffer *rb)
 {
 	int64_t err, res = 0;
 	int i;
-
 	for (i = 0; i < rb->ring_cnt; i++) {
 		struct ring *ring = &rb->rings[i];
-
 		err = ringbuf_process_ring(ring);
 		if (err < 0)
 			return libbpf_err(err);

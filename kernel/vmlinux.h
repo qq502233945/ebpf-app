@@ -125,7 +125,7 @@ typedef struct VMStateDescription VMStateDescription;
 typedef struct DumpState DumpState;
 typedef struct RAMBlockNotifier RAMBlockNotifier;
 
-
+typedef struct VRMRCS VRMRCS; //352
 
 
 
@@ -323,7 +323,7 @@ struct MemoryRegionCache {
 };
 
 
-struct VRMRC {
+struct VRMRCS {
     struct rcu_head rcu;
     struct MemoryRegionCache desc;
     struct MemoryRegionCache avail;
@@ -338,7 +338,7 @@ typedef struct VRing
     hwaddr desc;
     hwaddr avail;
     hwaddr used;
-    struct VRMRC *caches;
+    struct VRMRCS *caches;
 } VRing;
 
 typedef struct VRingAvail
@@ -561,7 +561,7 @@ struct EventNotifier {
     bool initialized;
 };
 
-struct VirtQueue
+struct VirtQueue //152
 {
     VRing vring;
     VirtQueueElement *used_elems;
@@ -674,8 +674,11 @@ typedef struct subpage_t {
 } subpage_t;
 
 typedef struct fast_map {
-    struct iovec iovec[3];
-    hwaddr addr[3];
+    struct iovec iovec[10];
+    hwaddr addr[10];
+    uint32_t in_num;
+    uint32_t out_num;
+    uint32_t type;
     bool fast;
     uint32_t wfd;
     uint32_t fd;
@@ -705,5 +708,23 @@ typedef struct Useraddr
     uint64_t vdev_isr;
     uint64_t shadow_avail_idx;
 } Useraddr;
+
+struct host_extent_status {
+	uint32_t es_lblk;	/* first logical block extent covers */
+	uint32_t es_len;	/* length of extent in block */
+	uint64_t es_pblk;	/* first physical block */
+};
+struct virtio_blk_outhdr {
+	unsigned int 	ib_enable;
+	struct host_extent_status ib_es[15];
+	unsigned int 	ib_es_num;
+	/* VIRTIO_BLK_T* */
+	uint32_t type;
+	/* io priority. */
+	uint32_t ioprio;
+	/* Sector (ie. 512 byte offset) */
+	uint32_t sector;
+};
+
 
 #endif
