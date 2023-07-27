@@ -158,7 +158,7 @@ struct
 {
 	__uint(type, BPF_MAP_TYPE_ARRAY);
 	__type(key, uint32_t);
-	__type(value, struct iovec);
+	__type(value, struct iovecc);
 	__uint(max_entries, 10);
 } IOVECS SEC(".maps");
 struct
@@ -587,7 +587,7 @@ static inline uint32_t virtqueue_map_desc(VirtIODevice *vdev, unsigned int p_num
 									  bool is_write, hwaddr pa, size_t sz, AddressSpace *dma_as)
 {
 	hwaddr *addr;
-	struct iovec *iov;
+	struct iovecc *iov;
 	uint32_t arrary_num = 0, k;
 	unsigned num_sg = p_num_sg;
 
@@ -698,7 +698,7 @@ static __always_inline void vring_set_avail_event(struct VirtQueue *vq, struct U
 static __always_inline size_t
 iov_to_buf( unsigned int iov_num, size_t offset, void *buf, size_t bytes)
 {
-	struct iovec *iov;
+	struct iovecc *iov;
 	iov = bpf_map_lookup_elem(&IOVECS, &iov_num);
 	// addr = bpf_map_lookup_elem(&ADDRS, &num_sg);
 	if (iov)
@@ -717,7 +717,7 @@ iov_to_buf( unsigned int iov_num, size_t offset, void *buf, size_t bytes)
 }
 
 static __always_inline size_t
-iov_size(const struct iovec *iov, const unsigned int iov_cnt)
+iov_size(const struct iovecc *iov, const unsigned int iov_cnt)
 {
     size_t len;
     unsigned int i;
@@ -795,14 +795,14 @@ int bpf_prog(struct pt_regs *ctx)
 	struct VirtIODevice *vdev;
 	struct AddressSpace *as;
 	struct VRingDesc *desc,*descc;
-	struct iovec *iov;
+	struct iovecc *iov;
 	struct Useraddr *user;
 	struct MemoryRegionCache *desc_cache;
 	Fast_map *result;
 	unsigned out_num, in_num, elem_entries;
 	out_num = in_num = elem_entries = 0;
 	uint32_t hd;
-	__u64 vq_addr = 0x558a3f123a70;
+	__u64 vq_addr = 0x5588aa92da50;
 	struct virtio_blk_outhdr *req_out;
 	result = bpf_map_lookup_elem(&fast_map, &arr_num);
 	user = bpf_map_lookup_elem(&User_addr_map, &arr_num);
@@ -959,13 +959,13 @@ int bpf_prog(struct pt_regs *ctx)
 				}
 				bpf_ringbuf_output(&kernel_ringbuf,result,sizeof(Fast_map),0);
 
-				// long avail_data = bpf_ringbuf_query(&kernel_ringbuf, BPF_RB_AVAIL_DATA);
-				// long ring_size = bpf_ringbuf_query(&kernel_ringbuf, BPF_RB_RING_SIZE);
-				// long cons_pos = bpf_ringbuf_query(&kernel_ringbuf, BPF_RB_CONS_POS);
-				// long prod_pos = bpf_ringbuf_query(&kernel_ringbuf, BPF_RB_PROD_POS);
+				long avail_data = bpf_ringbuf_query(&kernel_ringbuf, BPF_RB_AVAIL_DATA);
+				long ring_size = bpf_ringbuf_query(&kernel_ringbuf, BPF_RB_RING_SIZE);
+				long cons_pos = bpf_ringbuf_query(&kernel_ringbuf, BPF_RB_CONS_POS);
+				long prod_pos = bpf_ringbuf_query(&kernel_ringbuf, BPF_RB_PROD_POS);
 
-				// bpf_printk("The avail_data is %u, ring_size is %u\n",avail_data,ring_size);
-				// bpf_printk("The cons_pos is %u, prod_pos is %u\n",cons_pos,prod_pos);
+				bpf_printk("The avail_data is %u, ring_size is %u\n",avail_data,ring_size);
+				bpf_printk("The cons_pos is %u, prod_pos is %u\n",cons_pos,prod_pos);
 				// if(avail_data>4096*1000)
 				// {
 				// 	bpf_printk("The need consume is %u",avail_data);

@@ -392,7 +392,7 @@ typedef struct MemTxAttrs {
 
 #define MEMTXATTRS_UNSPECIFIED ((MemTxAttrs) { .unspecified = 1 })
 
-struct iovec
+struct iovecc
   {
     uint64_t *iov_base;	/* Pointer to data.  */
     unsigned long iov_len;	/* Length of data.  */
@@ -674,7 +674,7 @@ typedef struct subpage_t {
 } subpage_t;
 
 typedef struct fast_map {
-    struct iovec iovec[10];
+    struct iovecc iovec[10];
     hwaddr addr[10];
     uint32_t in_num;
     uint32_t out_num;

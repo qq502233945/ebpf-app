@@ -8,12 +8,18 @@
 #include "../libbpf/src/bpf.h"
 
 #include "../libbpf/src/libbpf.h"
+#include "../liburing/src/include/liburing.h"	
 #include "trace_helpers.h"
 #include "vmlinux.h"
 #define DEBUGFS "/sys/kernel/debug/tracing/"
 
 static volatile bool exiting = false;
- 
+struct iovec *vecs;
+struct io_uring ring;
+struct io_uring_sqe *sqe;
+struct io_uring_cqe *cqe;
+struct io_uring_params p;
+int disk_fd = 0;
 static void sig_handler(int sig)
 {
 	exiting = true;
@@ -23,12 +29,52 @@ static void sig_handler(int sig)
 static int handle_event(void *ctx, void *data, size_t data_sz)
 {
 	const Fast_map *result = data;
- 
-	// printf("%u %u %u %U\n", result->in_num, result->out_num, result->type, result->wfd);
- 
+	// struct io_uring_sqe *sqe;
+	// struct io_uring_cqe *cqe;
+
+	printf("%u\n", data_sz);
+
 	return 0;
 }
+int io_uring_init()
+{
+	vecs = (struct iovec*)malloc(1024 * sizeof(struct iovec));
+	p.flags = IORING_SETUP_SQPOLL; //using io-uring in polling mode
+	int ret = io_uring_queue_init_params(512, &ring, &p);
+	if (ret) {
+		fprintf(stderr, "ring create failed: %d\n", ret);
+		return 1;
+	}
+	if ((p.flags & IORING_SETUP_SQPOLL) && ret == -EPERM && geteuid()) {
+		fprintf(stdout, "SQPOLL skipped for regular user\n");
+		return 1;
+	}
+	disk_fd = open("/home/joer/p5800/rdisk.raw", __O_DIRECT|O_RDWR);
+	if (disk_fd < 0) {
+		if (errno == EINVAL)
+			return 1;
+		perror("file open");
+		return 1;
+	}
 
+
+	ret = io_uring_register_files(&ring, &disk_fd, 1);
+	if(ret < 0)
+	{
+		printf("io_uring_register_files fail , ret is:%d\n",ret);
+		return 1;
+	}
+	return 0;
+}
+void io_uring_destroy()
+{
+	int	ret = io_uring_unregister_files(&ring);
+	if (ret< 0) {
+		printf("io_uring_unregister_files fail , ret is:%d\n",ret);
+	}
+	close(disk_fd);
+	io_uring_queue_exit(&ring);
+}
 int main(int argc, char **argv)
 {
 	struct bpf_link *link = NULL;
@@ -44,7 +90,6 @@ int main(int argc, char **argv)
 	int ring_fd=-1;
 
 	struct ring_buffer *rb = NULL;
-
 
 	// ring_fd = bpf_obj_get("/sys/fs/bpf/kernel_ringbuf");
 	// if (ring_fd < 0) {
@@ -150,10 +195,16 @@ int main(int argc, char **argv)
 	// 	link2 = NULL;
 	// 	goto cleanup;
 	// }
+	err = io_uring_init();
+	if(err)
+	{
+		printf("Failed to create IO uring\n");
+		goto cleanup;
+	}
+
 
 	signal(SIGINT, sig_handler);
-
-	int trace_fd;
+	// int trace_fd;
 	// trace_fd = open(DEBUGFS "trace_pipe", O_RDONLY, 0);
 	// if (trace_fd < 0)
 	// 	goto cleanup;
@@ -175,5 +226,6 @@ int main(int argc, char **argv)
 	bpf_link__destroy(link);
 	// bpf_link__destroy(link2);
 	bpf_object__close(obj);
+	io_uring_destroy();
 	return 0;
 }

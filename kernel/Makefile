@@ -7,11 +7,13 @@ KERN_SOURCES = ${APPS:=_kern.c}
 USER_SOURCES = ${APPS:=_user.c}
 USER_SOURCES += trace_helpers.c
 USER_SOURCES += ../libbpf/src/
+USER_SOURCES += ../liburing/src/
+USER_SOURCES += ../liburing/src/include
 KERN_OBJECTS = ${KERN_SOURCES:.c=.o}
 USER_OBJECTS = ${USER_SOURCES:.c=.o}
 USER_LIBS += trace_helpers.o
 USER_LIBS += ../libbpf/src/libbpf.a
-
+USER_LIBS += ../liburing/src/liburing.a
 
 KERNEL_SOURCE ?= /usr/src/$(shell uname -r)
 KERNEL_INCLUDES := -I$(KERNEL_SOURCE)/tools/lib/
