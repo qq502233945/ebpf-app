@@ -29,10 +29,10 @@ KERNEL_INCLUDES += -I$(KERNEL_SOURCE)/include
 LIBBPF = -L$(KERNEL_SOURCE)/tools/lib/bpf/
 
 $(APPS): %: %_kern.o %_user.o $(USER_LIBS)
-	clang -Wall -O2 -g $@_user.o $(USER_LIBS) -static $(LIBBPF) -lbpf -lelf -lz -o $@
+	clang -Wall -O2 -g $@_user.o $(USER_LIBS) $(LIBBPF) -lbpf -lelf -pthread -lz -o $@ -lrt
 
 $(USER_OBJECTS): %.o: %.c
-	clang -g -O2 -Wall -I . -c $< -o $@
+	clang -g -O2  -Wall -I .  -c $<  -o $@
 
 $(KERN_OBJECTS): %.o: %.c
 	clang -g -O2 \
@@ -46,7 +46,8 @@ $(KERN_OBJECTS): %.o: %.c
 		-Wno-address-of-packed-member -Wno-tautological-compare \
 		-Wno-unknown-warning-option \
 		-Wno-typedef-redefinition \
-		$(KERNEL_INCLUDES)
+		$(KERNEL_INCLUDES) \
+		-lrt
 
 format:
 	VERSION_CONTROL=none indent -linux *.h *.c

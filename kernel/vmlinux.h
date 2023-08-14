@@ -148,6 +148,7 @@ enum {
 #define VRING_DESC_F_NEXT	1
 /* This marks a buffer as write-only (otherwise read-only). */
 #define VRING_DESC_F_WRITE	2
+#define VRING_DESC_F_INDIRECT	4
 typedef struct QTailQLink {
     void *tql_next;
     struct QTailQLink *tql_prev;
@@ -674,15 +675,15 @@ typedef struct subpage_t {
 } subpage_t;
 
 typedef struct fast_map {
-    struct iovecc iovec[10];
-    hwaddr addr[10];
+    struct iovecc iovec[40];
     uint32_t in_num;
     uint32_t out_num;
     uint32_t type;
     bool fast;
     uint32_t wfd;
     uint32_t fd;
-    uint16_t head;
+    uint32_t id;
+    uint64_t offset;
 } Fast_map;
 
 typedef struct VRingUsedElem
@@ -705,8 +706,13 @@ typedef struct Useraddr
     uint64_t last_avail_idx;
     uint64_t caches_used;
     uint64_t vring_used;
+    uint64_t avail_idx;
     uint64_t vdev_isr;
     uint64_t shadow_avail_idx;
+    uint64_t pa;
+    uint32_t vring_num;
+    uint32_t wfd;
+    VRingUsedElem elem;
 } Useraddr;
 
 struct host_extent_status {
@@ -723,8 +729,30 @@ struct virtio_blk_outhdr {
 	/* io priority. */
 	uint32_t ioprio;
 	/* Sector (ie. 512 byte offset) */
-	uint32_t sector;
+	uint64_t sector;
 };
 
+struct phys_page_find_ctx {
+	AddressSpaceDispatch *d;	
+	Node *nodes;	
+	PhysPageEntry *p;
+    PhysPageEntry *lp;
+    uint32_t *i;
+    struct MemoryRegionSection *section;
+    bool *ret;
+    hwaddr *indexx;
+};
+
+struct vec_pop_ctx {
+    Fast_map *result;
+    uint32_t *vq_id;
+    uint32_t *rc;
+    uint32_t *in_num;
+    uint32_t *out_num;
+    uint16_t *head;
+    struct VRingDesc *desc;
+    AddressSpace *as;
+    struct MemoryRegionCache *desc_cache;
+};
 
 #endif

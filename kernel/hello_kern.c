@@ -8,7 +8,7 @@
 #include "int128.h"
 struct {
 	__uint(type, BPF_MAP_TYPE_RINGBUF);
-	__uint(max_entries, 4096*2048);
+	__uint(max_entries, 16*4096*2048);
 } kernel_ringbuf SEC(".maps");
 
 struct
@@ -16,7 +16,7 @@ struct
 	__uint(type, BPF_MAP_TYPE_ARRAY);
 	__type(key, uint32_t);
 	__type(value, struct VirtQueue);
-	__uint(max_entries, 1);
+	__uint(max_entries, 8);
 } vq_map SEC(".maps");
 
 struct
@@ -24,7 +24,7 @@ struct
 	__uint(type, BPF_MAP_TYPE_ARRAY);
 	__type(key, uint32_t);
 	__type(value, struct VRingDesc);
-	__uint(max_entries, 256);
+	__uint(max_entries, 40*8);
 } descs SEC(".maps");
 
 struct
@@ -32,7 +32,7 @@ struct
 	__uint(type, BPF_MAP_TYPE_ARRAY);
 	__type(key, uint32_t);
 	__type(value, struct VRingDesc);
-	__uint(max_entries, 1);
+	__uint(max_entries, 8);
 } descs_cache SEC(".maps");
 
 struct
@@ -40,7 +40,7 @@ struct
 	__uint(type, BPF_MAP_TYPE_ARRAY);
 	__type(key, uint32_t);
 	__type(value, VRMRCS);
-	__uint(max_entries, 1);
+	__uint(max_entries, 8);
 } VRMRC SEC(".maps");
 
 struct
@@ -48,7 +48,7 @@ struct
 	__uint(type, BPF_MAP_TYPE_ARRAY);
 	__type(key, uint32_t);
 	__type(value, struct MemoryRegionCache);
-	__uint(max_entries, 1);
+	__uint(max_entries, 8);
 } MRC SEC(".maps");
 
 struct
@@ -56,7 +56,7 @@ struct
 	__uint(type, BPF_MAP_TYPE_ARRAY);
 	__type(key, uint32_t);
 	__type(value, struct VirtIODevice);
-	__uint(max_entries, 1);
+	__uint(max_entries, 8);
 } VDEV SEC(".maps");
 
 struct
@@ -64,7 +64,7 @@ struct
 	__uint(type, BPF_MAP_TYPE_ARRAY);
 	__type(key, uint32_t);
 	__type(value, struct AddressSpace);
-	__uint(max_entries, 1);
+	__uint(max_entries, 8);
 } AS SEC(".maps");
 
 struct
@@ -72,7 +72,7 @@ struct
 	__uint(type, BPF_MAP_TYPE_ARRAY);
 	__type(key, uint32_t);
 	__type(value, struct MemoryRegionCache);
-	__uint(max_entries, 1);
+	__uint(max_entries, 8);
 } IDC SEC(".maps");
 
 struct
@@ -80,7 +80,7 @@ struct
 	__uint(type, BPF_MAP_TYPE_ARRAY);
 	__type(key, uint32_t);
 	__type(value, struct flatview);
-	__uint(max_entries, 1);
+	__uint(max_entries, 8);
 } Cache_FLATV SEC(".maps");
 
 struct
@@ -88,7 +88,7 @@ struct
 	__uint(type, BPF_MAP_TYPE_ARRAY);
 	__type(key, uint32_t);
 	__type(value, struct AddressSpaceDispatch);
-	__uint(max_entries, 1);
+	__uint(max_entries, 8);
 } Dispatch SEC(".maps");
 
 struct
@@ -96,7 +96,7 @@ struct
 	__uint(type, BPF_MAP_TYPE_ARRAY);
 	__type(key, uint32_t);
 	__type(value, struct MemoryRegionSection);
-	__uint(max_entries, 1);
+	__uint(max_entries, 8);
 } Dispatch_MRU SEC(".maps");
 
 struct
@@ -104,7 +104,7 @@ struct
 	__uint(type, BPF_MAP_TYPE_ARRAY);
 	__type(key, uint32_t);
 	__type(value, Node);
-	__uint(max_entries, 1);
+	__uint(max_entries, 8);
 } Dispatch_M_Node SEC(".maps");
 
 struct
@@ -112,7 +112,7 @@ struct
 	__uint(type, BPF_MAP_TYPE_ARRAY);
 	__type(key, uint32_t);
 	__type(value, struct MemoryRegionSection);
-	__uint(max_entries, 3);
+	__uint(max_entries, 3*8);
 } Dispatch_M_Sec SEC(".maps");
 
 struct
@@ -120,7 +120,7 @@ struct
 	__uint(type, BPF_MAP_TYPE_ARRAY);
 	__type(key, uint32_t);
 	__type(value, struct MemoryRegionSection);
-	__uint(max_entries, 1);
+	__uint(max_entries, 8);
 } MRS SEC(".maps");
 
 struct
@@ -128,7 +128,7 @@ struct
 	__uint(type, BPF_MAP_TYPE_ARRAY);
 	__type(key, uint32_t);
 	__type(value, MemoryRegion);
-	__uint(max_entries, 1);
+	__uint(max_entries, 8);
 } MR SEC(".maps");
 
 struct
@@ -136,14 +136,14 @@ struct
 	__uint(type, BPF_MAP_TYPE_ARRAY);
 	__type(key, uint32_t);
 	__type(value, MemoryRegion);
-	__uint(max_entries, 1);
+	__uint(max_entries, 8);
 } Section_MR SEC(".maps");
 struct
 {
 	__uint(type, BPF_MAP_TYPE_ARRAY);
 	__type(key, uint32_t);
 	__type(value, subpage_t);
-	__uint(max_entries, 1);
+	__uint(max_entries, 8);
 } Subpage SEC(".maps");
 
 struct
@@ -151,38 +151,31 @@ struct
 	__uint(type, BPF_MAP_TYPE_ARRAY);
 	__type(key, uint32_t);
 	__type(value, RAMBlock);
-	__uint(max_entries, 1);
+	__uint(max_entries, 8);
 } RB SEC(".maps");
 
 struct
 {
 	__uint(type, BPF_MAP_TYPE_ARRAY);
 	__type(key, uint32_t);
-	__type(value, struct iovecc);
-	__uint(max_entries, 10);
-} IOVECS SEC(".maps");
-struct
-{
-	__uint(type, BPF_MAP_TYPE_ARRAY);
-	__type(key, uint32_t);
-	__type(value, hwaddr);
-	__uint(max_entries, 10);
-} ADDRS SEC(".maps");
-
-struct
-{
-	__uint(type, BPF_MAP_TYPE_ARRAY);
-	__type(key, uint32_t);
 	__type(value, Fast_map);
-	__uint(max_entries, 1);
+	__uint(max_entries, 8);
 } fast_map SEC(".maps");
 
 struct
 {
 	__uint(type, BPF_MAP_TYPE_ARRAY);
 	__type(key, uint32_t);
+	__type(value, uint32_t);
+	__uint(max_entries, 8);
+} Router SEC(".maps");
+
+struct
+{
+	__uint(type, BPF_MAP_TYPE_ARRAY);
+	__type(key, uint32_t);
 	__type(value, Useraddr);
-	__uint(max_entries, 1);
+	__uint(max_entries, 2048);
 } User_addr_map SEC(".maps");
 
 struct
@@ -190,19 +183,25 @@ struct
 	__uint(type, BPF_MAP_TYPE_ARRAY);
 	__type(key, uint32_t);
 	__type(value, struct virtio_blk_outhdr);
-	__uint(max_entries, 1);
+	__uint(max_entries, 8);
 } outhdr SEC(".maps");
 
+struct
+{
+	__uint(type, BPF_MAP_TYPE_ARRAY);
+	__type(key, uint32_t);
+	__type(value, uint16_t);
+	__uint(max_entries, 8);
+} old_avail_idx SEC(".maps");
 
-static inline void ramblock_ptr(RAMBlock *block, ram_addr_t offset, ram_addr_t *ptr)
+
+static inline void ramblock_ptr(RAMBlock *block, ram_addr_t offset, ram_addr_t *ptr, uint32_t vq_id)
 {
 	RAMBlock *rb;
-	uint32_t arrary_num = 0;
-
-	rb = bpf_map_lookup_elem(&RB, &arrary_num);
+	rb = bpf_map_lookup_elem(&RB, &vq_id);
 	if (rb)
 	{
-		bpf_copy_from_user(rb, sizeof(MemoryRegion), block);
+		bpf_copy_from_user(rb, sizeof(RAMBlock), block);
 		if (rb->host && offset < rb->used_length)
 		{
 			*ptr = rb->host + offset;
@@ -214,11 +213,10 @@ static inline void ramblock_ptr(RAMBlock *block, ram_addr_t offset, ram_addr_t *
 	}
 }
 
-static __always_inline bool memory_region_is_ram(MemoryRegion *mr)
+static __always_inline bool memory_region_is_ram(MemoryRegion *mr,uint32_t vq_id)
 {
 	MemoryRegion *mrr;
-	uint32_t arrary_num = 0;
-	mrr = bpf_map_lookup_elem(&MR, &arrary_num);
+	mrr = bpf_map_lookup_elem(&MR, &vq_id);
 	if (mrr)
 	{
 		bpf_copy_from_user(mrr, sizeof(MemoryRegion), mr);
@@ -226,11 +224,10 @@ static __always_inline bool memory_region_is_ram(MemoryRegion *mr)
 	}
 	return 0;
 }
-static inline bool memory_access_is_direct(MemoryRegion *mr, bool is_write)
+static inline bool memory_access_is_direct(MemoryRegion *mr, bool is_write,uint32_t vq_id)
 {
 	MemoryRegion *mrr;
-	uint32_t arrary_num = 0;
-	mrr = bpf_map_lookup_elem(&MR, &arrary_num);
+	mrr = bpf_map_lookup_elem(&MR, &vq_id);
 	if (mrr)
 	{
 		bpf_copy_from_user(mrr, sizeof(MemoryRegion), mr);
@@ -248,51 +245,89 @@ static inline bool memory_access_is_direct(MemoryRegion *mr, bool is_write)
 	return 0;
 }
 
-static __always_inline uint32_t phys_page_find(AddressSpaceDispatch *d, hwaddr addr)
+
+static int  phys_page_find_sub(uint32_t index, void *ctxx)
 {
-	PhysPageEntry lp = d->phys_map, *p, *temp;
+	struct phys_page_find_ctx *ctx;
+	
+	ctx = (struct phys_page_find_ctx *)ctxx;
+	if(ctx->lp->skip&&((*ctx->i-=ctx->lp->skip)>=0))
+	{	
+
+		if(ctx->lp->ptr == PHYS_MAP_NODE_NIL)
+		{
+			bpf_copy_from_user(ctx->section, sizeof(struct MemoryRegionSection), &ctx->d->map.sections[0]);
+			*ctx->ret = 1;
+			return 1;
+		}
+		bpf_copy_from_user(ctx->nodes, sizeof(Node), &ctx->d->map.nodes[ctx->lp->ptr]);
+		ctx->p = ctx->nodes;
+		ctx->lp = &ctx->p[(*ctx->indexx >> (*ctx->i * P_L2_BITS)) & (P_L2_SIZE - 1)];
+	}
+	return 0;
+}
+
+
+
+
+static __always_inline uint32_t  phys_page_find(AddressSpaceDispatch *d, hwaddr addr, uint32_t vq_id)
+{
+	PhysPageEntry lp = d->phys_map, *p;
 	uint32_t arrary_num = 0;
 	Node *nodes;
 	struct MemoryRegionSection *section, *section1;
-	hwaddr index = addr >> TARGET_PAGE_BITS;
-	nodes = bpf_map_lookup_elem(&Dispatch_M_Node, &arrary_num);
-	section = bpf_map_lookup_elem(&Dispatch_M_Sec, &arrary_num);
-	int i, t = 5;
+	hwaddr addrr;
+	uint32_t num;
+	struct phys_page_find_ctx ctx;
+	#pragma unrol
+	nodes = bpf_map_lookup_elem(&Dispatch_M_Node, &vq_id);
+	num = arrary_num + 3 *vq_id;
+	section = bpf_map_lookup_elem(&Dispatch_M_Sec, &num);
+	int i, t;
+	bool ret=0;
+	
 	if (nodes && section)
 	{
 
 		bpf_copy_from_user(nodes, sizeof(Node), d->map.nodes);
-		temp = nodes;
-		// for (i=0; i<20;i++)
+		addrr = addr >> TARGET_PAGE_BITS;
+		t =20;
+		i = P_L2_LEVELS;
+		ctx.d = d;
+		ctx.lp = &lp;
+		ctx.nodes = nodes;
+		ctx.p = p;
+		ctx.i = &i;
+		ctx.section = section;
+		ctx.ret = &ret;
+		ctx.indexx = &addrr;
+		bpf_loop(t, phys_page_find_sub, &ctx, 0);
+		if(*ctx.ret)
+			return 0;
+		// for (i = P_L2_LEVELS; lp.skip && (i -= lp.skip) >= 0; )
 		// {
-		// 	bpf_printk("node **** skip is %u: ptr is %u\n", temp[i].skip,temp[i].ptr);
+		// 	if (lp.ptr == PHYS_MAP_NODE_NIL)
+		// 	{
+
+		// 		bpf_copy_from_user(section, sizeof(struct MemoryRegionSection), &d->map.sections[0]);
+		// 		return 0;
+		// 	}
+		// 	bpf_copy_from_user(nodes, sizeof(Node), d->map.nodes[lp.ptr]);
+		// 	p = nodes;
+		// 	lp = p[(index >> (i * P_L2_BITS)) & (P_L2_SIZE - 1)];
+		// 	t--;
 		// }
-
-		for (i = P_L2_LEVELS; t && lp.skip && (i -= lp.skip) >= 0; t--)
-		{
-			// bpf_printk("lp skip is 0x%x: ptr is 0x%x\n", lp.skip,lp.ptr);
-			if (lp.ptr == PHYS_MAP_NODE_NIL)
-			{
-
-				bpf_copy_from_user(section, sizeof(struct MemoryRegionSection), &d->map.sections[0]);
-				// bpf_printk("section regin is %lu: address is %lu\n", section->offset_within_region, section->offset_within_address_space);
-				return 0;
-			}
-			bpf_copy_from_user(nodes, sizeof(Node), d->map.nodes[lp.ptr]);
-			// p = &temp[lp.ptr];
-			p = nodes;
-			// bpf_printk("step 1 p skip is %u: ptr is %u\n", p->skip,p->ptr);
-			lp = p[(index >> (i * P_L2_BITS)) & (P_L2_SIZE - 1)];
-			// bpf_printk("step 2 lp skip is %u: ptr is %u\n", lp.skip,lp.ptr);
-		}
+		
 		arrary_num = 1;
-		section1 = bpf_map_lookup_elem(&Dispatch_M_Sec, &arrary_num);
+		num = arrary_num + 3 *vq_id;
+		section1 = bpf_map_lookup_elem(&Dispatch_M_Sec, &num);
+		
 		if (section1)
 		{
-			bpf_copy_from_user(section1, sizeof(struct MemoryRegionSection), &d->map.sections[lp.ptr]);
+			
+			bpf_copy_from_user(section1, sizeof(struct MemoryRegionSection), &d->map.sections[ctx.lp->ptr]);
 			if (section_covers_addr(section1, addr))
 			{
-				// bpf_printk("section1 regin is %lu: address is %lu\n", section1->offset_within_region, section1->offset_within_address_space);
 				return 1;
 			}
 			else
@@ -306,29 +341,37 @@ static __always_inline uint32_t phys_page_find(AddressSpaceDispatch *d, hwaddr a
 	return 0;
 }
 
-static __always_inline uint32_t address_space_lookup_region(AddressSpaceDispatch *d, struct MemoryRegionSection *section, hwaddr addr, bool resolve_subpage)
+
+static __always_inline uint32_t address_space_lookup_region(AddressSpaceDispatch *d, struct MemoryRegionSection *section, hwaddr addr, bool resolve_subpage,uint32_t vq_id)
 {
 	uint32_t arrary_num = 0;
 	uint32_t ret = 0;
+	uint32_t num;
 	struct MemoryRegionSection *section1;
 	struct MemoryRegion *mr;
 	subpage_t *subpage;
 	uint64_t sub=0;
-	// bpf_printk("mru_section addr is %lx: map is %lx\n", d->mru_section, d->map.sections);
+	num = ret+vq_id*3;
+	bpf_map_update_elem(&Dispatch_M_Sec, &num, section, BPF_ANY);
+	
 	if (!section_covers_addr(section, addr) || !section || d->mru_section == &d->map.sections[0])
 	{
 
-		ret = phys_page_find(d, addr);
-		section1 = bpf_map_lookup_elem(&Dispatch_M_Sec, &ret);
+		// bpf_printk("step 2\n");
+		
+		ret = phys_page_find(d, addr,vq_id);
+		
+		num = ret+vq_id*3;
+		section1 = bpf_map_lookup_elem(&Dispatch_M_Sec, &num);
 		if (section1)
 		{
-			bpf_map_update_elem(&Dispatch_MRU, &arrary_num, section1, BPF_ANY);
+			bpf_map_update_elem(&Dispatch_MRU, &vq_id, section1, BPF_ANY);
 		}
 
 	}
 	
-	section1 = bpf_map_lookup_elem(&Dispatch_MRU, &arrary_num);
-	mr = bpf_map_lookup_elem(&Section_MR, &arrary_num);
+	section1 = bpf_map_lookup_elem(&Dispatch_MRU, &vq_id);
+	mr = bpf_map_lookup_elem(&Section_MR, &vq_id);
 	if(mr&&section1)
 	{
 		bpf_copy_from_user(mr, sizeof(struct MemoryRegion), section1->mr);
@@ -338,12 +381,11 @@ static __always_inline uint32_t address_space_lookup_region(AddressSpaceDispatch
 			
 			hwaddr pa = offsetof(subpage_t, sub_section[SUBPAGE_IDX(addr)]);
 			bpf_copy_from_user(&sub, sizeof(uint16_t), (void *)(subpage+ pa));
-			// bpf_copy_from_user(subpage, sizeof(struct MemoryRegion), &section1->mr);
 			hwaddr pa2 = offsetof(PhysPageMap, sections[sub]);
 			bpf_copy_from_user(section1, sizeof(struct MemoryRegionSection), (void *)(&d->map+ pa2));
-			// section = &d->map.sections[subpage->sub_section[SUBPAGE_IDX(addr)]];
 			arrary_num = 2;
-			bpf_map_update_elem(&Dispatch_M_Sec, &arrary_num, section1, BPF_ANY);
+			num = arrary_num+vq_id*3;
+			bpf_map_update_elem(&Dispatch_M_Sec, &num, section1, BPF_ANY);
 			ret = 2;
 			bpf_printk("ret is %u\n",ret);
 		}
@@ -352,39 +394,40 @@ static __always_inline uint32_t address_space_lookup_region(AddressSpaceDispatch
 	return ret;
 }
 
+
 static __always_inline int address_space_translate_internal(AddressSpaceDispatch *d, hwaddr addr, hwaddr *xlat,
-															hwaddr *plen, bool resolve_subpage, bool init)
+															hwaddr *plen, bool resolve_subpage, bool init,uint32_t vq_id)
 {
 	uint32_t arrary_num = 0, ret;
 	struct MemoryRegionSection *section;
 	Int128 diff;
-	section = bpf_map_lookup_elem(&Dispatch_MRU, &arrary_num);
+	uint32_t num;
+	section = bpf_map_lookup_elem(&Dispatch_MRU, &vq_id);
 	if (section)
 	{
 
 		bpf_copy_from_user(section, sizeof(struct MemoryRegionSection), d->mru_section);
-		ret = address_space_lookup_region(d, section, addr, resolve_subpage);
-		
-		section = bpf_map_lookup_elem(&Dispatch_M_Sec, &ret);
+		ret = address_space_lookup_region(d, section, addr, resolve_subpage,vq_id);
+		num = ret+vq_id*3;
+		section = bpf_map_lookup_elem(&Dispatch_M_Sec, &num);
 
 		if (section)
 		{
-			// bpf_printk("section regin is %lu: address is %lu\n", section->offset_within_region, section->offset_within_address_space);
 			addr -= section->offset_within_address_space;
 			*xlat = addr + section->offset_within_region;
+			
 			if(init)
 			{
 				diff = int128_sub(section->size, int128_make64(addr));
 				*plen = int128_get64(int128_min(diff, int128_make64(*plen)));
+
 				return ret;
 			}
-			if (memory_region_is_ram(section->mr))
+			if (memory_region_is_ram(section->mr,vq_id))
 			{
-
 				diff = int128_sub(section->size, int128_make64(addr));
 				*plen = int128_get64(int128_min(diff, int128_make64(*plen)));
 			}
-			// bpf_printk("xlat is %lu, plen is %u\n",*xlat,*plen);
 			return ret;
 		}
 	}
@@ -392,10 +435,12 @@ static __always_inline int address_space_translate_internal(AddressSpaceDispatch
 	return 0;
 }
 
+
 static __always_inline uint32_t address_space_cache_init(AddressSpace *as,
 														 hwaddr addr,
 														 hwaddr len,
-														 bool is_write)
+														 bool is_write,
+														 uint32_t vq_id)
 {
 	struct MemoryRegionCache *i_desc_cache;
 	struct flatview *view;
@@ -405,37 +450,45 @@ static __always_inline uint32_t address_space_cache_init(AddressSpace *as,
 	uint32_t arrary_num = 0, ret = 0;
 	hwaddr l;
 	Int128 diff;
+	uint32_t num;
 	l = len;
-	i_desc_cache = bpf_map_lookup_elem(&IDC, &arrary_num);
-	view = bpf_map_lookup_elem(&Cache_FLATV, &arrary_num);
-	d = bpf_map_lookup_elem(&Dispatch, &arrary_num);
+	i_desc_cache = bpf_map_lookup_elem(&IDC, &vq_id);
+	view = bpf_map_lookup_elem(&Cache_FLATV, &vq_id);
+	d = bpf_map_lookup_elem(&Dispatch, &vq_id);
 	if (i_desc_cache && d && view)
 	{
 		bpf_copy_from_user(view, sizeof(struct flatview), as->current_map);
 		bpf_copy_from_user(d, sizeof(struct AddressSpaceDispatch), view->dispatch);
-		ret = address_space_translate_internal(d, addr, &i_desc_cache->xlat, &l, true,1);
+		
+		ret = address_space_translate_internal(d, addr, &i_desc_cache->xlat, &l, true,1,vq_id);
 
 
 		arrary_num = ret;
-
-		section = bpf_map_lookup_elem(&Dispatch_M_Sec, &arrary_num);
+		num = arrary_num+3*vq_id;
+		section = bpf_map_lookup_elem(&Dispatch_M_Sec, &num);
 		if (section)
 		{
+			
 			diff = int128_sub(section->size, int128_make64(i_desc_cache->xlat - section->offset_within_region));
 			l = int128_get64(int128_min(diff, int128_make64(l)));
-
-			if (memory_access_is_direct(section->mr, is_write))
+			
+			if (memory_access_is_direct(section->mr, is_write,vq_id))
 			{
-				// bpf_printk("here 1\n");
-				arrary_num = 0;
-				mrr = bpf_map_lookup_elem(&MR, &arrary_num);
+				mrr = bpf_map_lookup_elem(&MR, &vq_id);
 				if (mrr)
 				{
-					ramblock_ptr(mrr->ram_block, i_desc_cache->xlat, &i_desc_cache->ptr);
+					// bpf_printk(" section mr addr arrary_num  is %u\n",section->mr);
+					ramblock_ptr(mrr->ram_block, i_desc_cache->xlat, &i_desc_cache->ptr,vq_id);
 				}
 			}
 			else
 			{
+				// mrr = bpf_map_lookup_elem(&MR, &vq_id);
+				// if (mrr)
+				// {
+				// 	// bpf_printk(" error section mr addr arrary_num  is %u\n",section->mr);
+				// }
+
 				i_desc_cache->ptr = NULL;
 			}
 			i_desc_cache->len = l;
@@ -446,32 +499,45 @@ static __always_inline uint32_t address_space_cache_init(AddressSpace *as,
 	return 0;
 }
 
-static __always_inline uint32_t vring_split_desc_read(struct MemoryRegionCache *desc_cache, uint32_t head_num, uint32_t *ret) // To get the head vring
+
+static __always_inline uint32_t vring_split_desc_read(struct MemoryRegionCache *desc_cache, uint32_t head_num, uint32_t *ret, uint32_t vq_id,uint32_t desc_id) // To get the head vring
 {
 	struct VRingDesc *vrdesc;
-	// bpf_printk("Head is %u\n", head_num);
-
-	vrdesc = bpf_map_lookup_elem(&descs, &head_num);
+	uint32_t num;
+	num = desc_id+vq_id*40;
+	vrdesc = bpf_map_lookup_elem(&descs, &num);
 	if (vrdesc)
 	{
 		bpf_copy_from_user(vrdesc, sizeof(struct VRingDesc), desc_cache->ptr + head_num * sizeof(struct VRingDesc));
-		if (ret != NULL)
-		{
-			*ret = vrdesc->next;
-		}
-		// bpf_printk("VRing Desc addr is %lu: len is %u, next is %u\n", vrdesc->addr, vrdesc->len, vrdesc->next);
-		// bpf_printk("VRing Desc flag is %u\n", vrdesc->flags);
 	}
-	// head_num++;
+
 	return 0;
 }
-static __always_inline uint32_t vring_split_desc_read_cache(struct MemoryRegionCache *desc_cache, uint32_t head_num, uint32_t *ret) // To get the head vring
+static __always_inline uint32_t vring_split_desc_read_d(struct MemoryRegionCache *desc_cache, uint32_t head_num, uint32_t *ret, uint32_t vq_id) // To get the head vring
 {
 	struct VRingDesc *vrdesc;
-	// bpf_printk("Head is %u\n", head_num);
-	int arr_num=0;
+	uint32_t num;
+	num = head_num+vq_id*40;
+	vrdesc = bpf_map_lookup_elem(&descs, &num);
+	if (vrdesc)
+	{
+		bpf_copy_from_user(vrdesc, sizeof(struct VRingDesc), desc_cache->ptr + head_num * sizeof(struct VRingDesc));
+		if(vrdesc->len == 0)
+		{
+			bpf_printk("vq_id is %lu\n",vq_id);
+			bpf_printk("desc_cache xlat is %lu\n",desc_cache->xlat);
+			bpf_printk("desc_cache ptr is 0x%lx\n",desc_cache->ptr);
+			bpf_printk("desc->addr is %lu, desc->len is %u\n",vrdesc->addr, vrdesc->len);
 
-	vrdesc = bpf_map_lookup_elem(&descs_cache, &arr_num);
+		}	
+	}
+
+	return 0;
+}
+static __always_inline uint32_t vring_split_desc_read_cache(struct MemoryRegionCache *desc_cache, uint32_t head_num, uint32_t *ret, uint32_t vq_id) // To get the head vring
+{
+	struct VRingDesc *vrdesc;
+	vrdesc = bpf_map_lookup_elem(&descs_cache, &vq_id);
 	if (vrdesc)
 	{
 		bpf_copy_from_user(vrdesc, sizeof(struct VRingDesc), desc_cache->ptr + head_num * sizeof(struct VRingDesc));
@@ -479,17 +545,14 @@ static __always_inline uint32_t vring_split_desc_read_cache(struct MemoryRegionC
 		{
 			*ret = vrdesc->next;
 		}
-		// bpf_printk("VRing Desc addr is %lu: len is %u, next is %u\n", vrdesc->addr, vrdesc->len, vrdesc->next);
-		// bpf_printk("VRing Desc flag is %u\n", vrdesc->flags);
 	}
-	// head_num++;
 	return 0;
 }
 static __always_inline uint16_t vring_get_region_caches(struct VirtQueue *vq) //
 {
 	int ret = 0;
 	VRMRCS *caches;
-	caches = bpf_map_lookup_elem(&VRMRC, &ret);
+	caches = bpf_map_lookup_elem(&VRMRC, &vq->queue_index);
 	if (caches)
 	{
 		bpf_copy_from_user(caches, sizeof(VRMRCS), vq->vring.caches);
@@ -506,7 +569,8 @@ static inline int flatview_do_translate(flatview *fv,
 										hwaddr *page_mask_out,
 										bool is_write,
 										bool is_mmio,
-										MemTxAttrs attrs)
+										MemTxAttrs attrs,
+										uint32_t vq_id)
 {
 	MemoryRegionSection *section;
 	uint32_t arrary_num = 0;
@@ -517,12 +581,12 @@ static inline int flatview_do_translate(flatview *fv,
 	{
 		plen_out = &plen;
 	}
-	d = bpf_map_lookup_elem(&Dispatch, &arrary_num);
+	d = bpf_map_lookup_elem(&Dispatch, &vq_id);
 	if (d)
 	{
 		bpf_copy_from_user(d, sizeof(AddressSpaceDispatch), fv->dispatch);
 
-		ret = address_space_translate_internal(d, addr, xlat, plen_out, is_mmio,0);
+		ret = address_space_translate_internal(d, addr, xlat, plen_out, is_mmio,0,vq_id);
 
 		return ret;
 	}
@@ -531,17 +595,17 @@ static inline int flatview_do_translate(flatview *fv,
 
 static inline int flatview_translate(flatview *fv, hwaddr addr, hwaddr *xlat,
 									 hwaddr *plen, bool is_write,
-									 MemTxAttrs attrs)
+									 MemTxAttrs attrs, uint32_t vq_id)
 {
 	int ret = 0;
 	ret = flatview_do_translate(fv, addr, xlat, plen, NULL,
-								is_write, true, attrs);
+								is_write, true, attrs,vq_id);
 
 	return ret;
 }
 
 static inline ram_addr_t *dma_memory_map(AddressSpace *dma_as, dma_addr_t addr, dma_addr_t *len,
-										 DMADirection dir, MemTxAttrs attrs, ram_addr_t *iov_base)
+										 DMADirection dir, MemTxAttrs attrs, ram_addr_t *iov_base,uint32_t vq_id)
 {
 	hwaddr xlen = *len;
 	uint32_t arrary_num = 0;
@@ -550,30 +614,29 @@ static inline ram_addr_t *dma_memory_map(AddressSpace *dma_as, dma_addr_t addr, 
 	MemoryRegionSection *section;
 	MemoryRegion *mrr;
 	void *temp_ptr = NULL;
+	uint32_t num;
 	int ret = 0;
 	xlat = 0;
 	l = xlen;
-	fv = bpf_map_lookup_elem(&Cache_FLATV, &arrary_num);
+	fv = bpf_map_lookup_elem(&Cache_FLATV, &vq_id);
 	if (fv)
 	{
 		bpf_copy_from_user(fv, sizeof(struct flatview), dma_as->current_map);
-		ret = flatview_translate(fv, addr, &xlat, &l, dir == DMA_DIRECTION_FROM_DEVICE, attrs);
+		ret = flatview_translate(fv, addr, &xlat, &l, dir == DMA_DIRECTION_FROM_DEVICE, attrs,vq_id);
 		if (ret == 1)
 		{
 			arrary_num = 1;
 		}
-		section = bpf_map_lookup_elem(&Dispatch_M_Sec, &arrary_num);
+		num = arrary_num+3*vq_id;
+		section = bpf_map_lookup_elem(&Dispatch_M_Sec, &num);
 		if (section)
 		{
-			// bpf_printk("section ret is %d,regin is %lu\n: address is %lu\n",arrary_num, section->offset_within_region, section->offset_within_address_space);
-			// bpf_printk("xlen is %lu, l is %lu\n",xlen,l);
-			arrary_num = 0;
-			mrr = bpf_map_lookup_elem(&MR, &arrary_num);
+			mrr = bpf_map_lookup_elem(&MR, &vq_id);
 			if (mrr)
 			{
 				bpf_copy_from_user(mrr, sizeof(MemoryRegion), section->mr);
 
-				ramblock_ptr(mrr->ram_block, xlat, &temp_ptr);
+				ramblock_ptr(mrr->ram_block, xlat, &temp_ptr,vq_id);
 			}
 			if (temp_ptr != NULL)
 				*iov_base = temp_ptr;
@@ -583,43 +646,25 @@ static inline ram_addr_t *dma_memory_map(AddressSpace *dma_as, dma_addr_t addr, 
 	*len = xlen;
 	return 0;
 }
-static inline uint32_t virtqueue_map_desc(VirtIODevice *vdev, unsigned int p_num_sg,
-									  bool is_write, hwaddr pa, size_t sz, AddressSpace *dma_as)
+
+static __always_inline uint32_t virtqueue_map_desc(uint32_t vq_id,struct iovecc *iov, bool is_write, hwaddr pa, size_t sz, AddressSpace *dma_as)
 {
 	hwaddr *addr;
-	struct iovecc *iov;
-	uint32_t arrary_num = 0, k;
-	unsigned num_sg = p_num_sg;
+	uint32_t arrary_num = 0;
+	hwaddr len = sz;
 
-	k = 2;
-	// while(sz&&k>0)
-	// {
-	iov = bpf_map_lookup_elem(&IOVECS, &num_sg);
-	// addr = bpf_map_lookup_elem(&ADDRS, &num_sg);
-	if (iov)
+	dma_memory_map(dma_as, pa, &len, is_write ? DMA_DIRECTION_FROM_DEVICE : DMA_DIRECTION_TO_DEVICE,
+				MEMTXATTRS_UNSPECIFIED, &iov->iov_base,vq_id);
+	if(len!=sz)
 	{
-		hwaddr len = sz;
-
-		dma_memory_map(dma_as, pa, &len, is_write ? DMA_DIRECTION_FROM_DEVICE : DMA_DIRECTION_TO_DEVICE,
-					   MEMTXATTRS_UNSPECIFIED, &iov->iov_base);
-		if(len!=sz)
-		{
-			bpf_printk("map error\n");
-			return 1;
-		}
-		iov->iov_len = len;
-		// *addr = pa;
-		num_sg++;
-
-		// sz -= len;
-		// pa += len;
-		// k--;
+		bpf_printk("map error\n");
+		return 1;
 	}
+	iov->iov_len = len;
 	return 0;
-	// }
 }
 
-static __always_inline uint16_t vring_avail_ring() // To get the head vring
+static __always_inline uint16_t vring_avail_ring(uint32_t vq_id) // To get the head vring
 {
 	uint16_t head=0;
 
@@ -627,14 +672,13 @@ static __always_inline uint16_t vring_avail_ring() // To get the head vring
 	struct MemoryRegionCache *desc;
 	struct VRingDesc *vrdesc;
 	VRMRCS *caches;
-	int ret = 0;
-	vq = bpf_map_lookup_elem(&vq_map, &ret);
+	vq = bpf_map_lookup_elem(&vq_map, &vq_id);
 	if (vq)
 	{
 		uint32_t idx = vq->last_avail_idx % vq->vring.num;
 		hwaddr pa = offsetof(VRingAvail, ring[idx]);
-		// vring_get_region_caches(vq);
-		caches = bpf_map_lookup_elem(&VRMRC, &ret);
+		vring_get_region_caches(vq);
+		caches = bpf_map_lookup_elem(&VRMRC, &vq_id);
 		if (caches)
 		{
 			bpf_copy_from_user(&head, sizeof(uint16_t), (void *)(caches->avail.ptr + pa));
@@ -645,12 +689,12 @@ static __always_inline uint16_t vring_avail_ring() // To get the head vring
 	return head;
 }
 
-static inline uint16_t vring_avail_idx(struct VirtQueue *vq)
+static inline uint16_t vring_avail_idx(struct VirtQueue *vq,int vq_id)
 {
 	VRMRCS *caches;
 	uint32_t arr_num;
 	arr_num = 0;
-	caches = bpf_map_lookup_elem(&VRMRC, &arr_num);
+	caches = bpf_map_lookup_elem(&VRMRC, &vq->queue_index);
     hwaddr pa = offsetof(VRingAvail, idx);
 	uint16_t shadow_avail_idx;
 
@@ -670,48 +714,38 @@ static inline uint16_t vring_avail_idx(struct VirtQueue *vq)
 static __always_inline void vring_set_avail_event(struct VirtQueue *vq, struct Useraddr *user)
 {
 	uint16_t shadow_avail_idx;
-	VRMRCS *caches;
+
 	uint32_t arr_num;
 	arr_num = 0;
 	int ret = 0;
-	shadow_avail_idx = vring_avail_idx(vq);
-	caches = bpf_map_lookup_elem(&VRMRC, &arr_num);
-
-    
-	if(caches)
+	shadow_avail_idx = vring_avail_idx(vq,vq->queue_index);
+	ret = bpf_probe_write_user(user->shadow_avail_idx, &shadow_avail_idx, sizeof(uint16_t));
+	if(ret<0)
 	{
-		ret = bpf_probe_write_user(user->shadow_avail_idx, &shadow_avail_idx, sizeof(uint16_t));
-		if(ret<0)
-		{
-			bpf_printk("set shadow_avail_idx failure\n");
-		}
-		hwaddr pa = offsetof(VRingUsed, ring[vq->vring.num]);
-		ret = bpf_probe_write_user(user->vring_used + pa, &shadow_avail_idx, sizeof(uint16_t));
-		if(ret<0)
-		{
-			bpf_printk("update the vring used_idxerror!\n");
-		}
-
+		bpf_printk("set shadow_avail_idx failure\n");
 	}
+	hwaddr pa = offsetof(VRingUsed, ring[vq->vring.num]);
+	ret = bpf_probe_write_user(user->vring_used+ pa, &shadow_avail_idx, sizeof(uint16_t));
+	if(ret<0)
+	{
+		bpf_printk("update the vring used_idxerror!\n");
+	}
+
 }
 
 static __always_inline size_t
-iov_to_buf( unsigned int iov_num, size_t offset, void *buf, size_t bytes)
+iov_to_buf(struct iovecc *iov,size_t offset, void *buf, size_t bytes)
 {
-	struct iovecc *iov;
-	iov = bpf_map_lookup_elem(&IOVECS, &iov_num);
-	// addr = bpf_map_lookup_elem(&ADDRS, &num_sg);
-	if (iov)
+
+	if ( offset <= iov->iov_base && bytes <= iov->iov_len- offset)
 	{
-		 if ( offset <= iov->iov_base && bytes <= iov->iov_len- offset)
-        {
-			if (bpf_copy_from_user(buf,bytes,iov->iov_base + offset)<0)
-			{
-				bytes =  -1;
-			}
-			return bytes;
-        }
+		if (bpf_copy_from_user(buf,bytes,iov->iov_base + offset)<0)
+		{
+			bytes =  -1;
+		}
+		return bytes;
 	}
+
 	return 0;
 
 }
@@ -730,7 +764,7 @@ iov_size(const struct iovecc *iov, const unsigned int iov_cnt)
 }
 
 
-static __always_inline bool copy_vq(int num, __u64 *idx, __u64 *used, __u64 *ava_idx, __u64 vq_addr)
+static __always_inline uint32_t copy_vq(int num,  __u64 vq_addr)
 {
 	
 
@@ -740,21 +774,73 @@ static __always_inline bool copy_vq(int num, __u64 *idx, __u64 *used, __u64 *ava
 	struct VirtQueue *vq;
 	struct VirtQueue *vq2;
 	uint16_t shadow_avail_idx;
-	vq = bpf_map_lookup_elem(&vq_map, &ret);
-
-	if (vq)
+	uint16_t *shadow_avail_idx_old;
+	vq = bpf_map_lookup_elem(&vq_map, &num);
+	shadow_avail_idx_old = bpf_map_lookup_elem(&old_avail_idx, &num);
+	
+	if (vq&&shadow_avail_idx_old)
 	{
 		bpf_copy_from_user(vq, sizeof(struct VirtQueue), (struct VirtQueue *)addr);
 		vring_get_region_caches(vq);
-		shadow_avail_idx = vring_avail_idx(vq);
+		shadow_avail_idx = vring_avail_idx(vq,num);
+		if(*shadow_avail_idx_old==0)
+		{
+			*shadow_avail_idx_old = shadow_avail_idx;
+			return 0;
+		}
 		if(shadow_avail_idx==vq->last_avail_idx)
 		{
 			// bpf_printk("last_avail_idx is %u\n",vq->last_avail_idx);
 			// bpf_printk("new shadow_avail_idx is %u\n",shadow_avail_idx);
 			return 0;
 		}
-		// bpf_printk("last_avail_idx is %u\n",vq->last_avail_idx);
-		// 	bpf_printk("new shadow_avail_idx is %u\n",shadow_avail_idx);	
+		if((shadow_avail_idx - *shadow_avail_idx_old)>1)
+		{
+			// bpf_printk("new shadow_avail_idx is %u\n",shadow_avail_idx);	
+			// bpf_printk("old shadow_avail_idx idx is %u\n",*shadow_avail_idx_old);	
+			ret = shadow_avail_idx - *shadow_avail_idx_old;
+			*shadow_avail_idx_old = shadow_avail_idx;
+
+			// bpf_printk("new req num  is %u\n",ret);	
+			return ret;
+		}
+		*shadow_avail_idx_old = shadow_avail_idx;
+
+		return shadow_avail_idx -vq->last_avail_idx;
+	}
+
+	return 0;
+}
+
+static __always_inline int copy_vq_2(int num, __u64 *idx, __u64 *used, __u64 *ava_idx, __u64 vq_addr)
+{
+	
+
+	__u64 addr = vq_addr + num * 0x98;
+	uint32_t ret = 0;
+	__u16 lastavailidx;
+	struct VirtQueue *vq;
+	struct VirtQueue *vq2;
+	uint16_t shadow_avail_idx;
+	uint16_t *shadow_avail_idx_old;
+	vq = bpf_map_lookup_elem(&vq_map, &num);
+	shadow_avail_idx_old = bpf_map_lookup_elem(&old_avail_idx, &num);
+	
+	if (vq&&shadow_avail_idx_old)
+	{
+		bpf_copy_from_user(vq, sizeof(struct VirtQueue), (struct VirtQueue *)addr);
+		vring_get_region_caches(vq);
+		shadow_avail_idx = vring_avail_idx(vq,num);
+		
+		if(shadow_avail_idx==vq->last_avail_idx)
+		{
+			// bpf_printk("last_avail_idx is %u\n",vq->last_avail_idx);
+			// bpf_printk("new shadow_avail_idx is %u\n",shadow_avail_idx);
+			return 0;
+		}
+		*shadow_avail_idx_old = shadow_avail_idx;
+		bpf_printk("new shadow_avail_idx is %u\n",shadow_avail_idx);	
+		bpf_printk("vq last_avail_idx idx is %u\n",vq->last_avail_idx);	
 		hwaddr pa = offsetof(struct VirtQueue, last_avail_idx);
 		*idx = pa + addr;
 		pa = offsetof(struct VirtQueue, used_idx);
@@ -767,8 +853,90 @@ static __always_inline bool copy_vq(int num, __u64 *idx, __u64 *used, __u64 *ava
 	return 0;
 }
 
+static __always_inline uint16_t vring_used_idx_set(struct Useraddr *user, uint16_t val) //
+{
+	int ret = 0;
+	hwaddr pa = offsetof(VRingUsed, idx);
+	ret = bpf_probe_write_user(user->vring_used + pa, &val, sizeof(val));
+	if(ret<0)
+	{
+		bpf_printk("update the vring used_idxerror!\n");
+	}
+	ret = bpf_probe_write_user(user->used_idx, &val, sizeof(val));
+	if(ret<0)
+	{
+		bpf_printk("update the vring used_idxerror!\n");
+	}
+	return 0;
+}
+static __always_inline uint16_t virtio_set_isr(struct VirtIODevice *vdev,struct Useraddr *user, uint8_t value) //
+{
+	uint8_t old = vdev->isr;
+	int ret;
+	if ((old & value) != value)
+	{
+		ret = bpf_probe_write_user(user->vdev_isr, &value, sizeof(uint8_t));
+		if(ret<0)
+		{
+			bpf_printk("update the vring used_idxerror!\n");
+		}
+	}
 
+}
 
+static int desc_pop_sub(uint32_t index, void *ctxx)
+{
+	struct vec_pop_ctx *ctx;
+	uint32_t num=0;
+	int ret;
+	ctx = (struct vec_pop_ctx *)ctxx;
+	if(*ctx->rc==VIRTQUEUE_READ_DESC_MORE)
+	{
+		num = *ctx->out_num+*ctx->in_num+40*(*ctx->vq_id);
+		ctx->desc = bpf_map_lookup_elem(&descs, &num);
+
+		if(ctx->desc ==NULL)
+			return 1;
+		if (ctx->desc->flags & VRING_DESC_F_WRITE)
+		{
+			ret = virtqueue_map_desc(*ctx->vq_id,&ctx->result->iovec[*ctx->in_num + *ctx->out_num], true, ctx->desc->addr, ctx->desc->len, ctx->as);
+			if(ret)
+				return 1;
+			*ctx->in_num = *ctx->in_num + 1;
+		}
+		else
+		{
+			if(*ctx->in_num)
+			{
+
+				bpf_printk("desc flags is %u\n",ctx->desc->flags );
+				bpf_printk("head is %u\n",ctx->head);
+				return 1;
+			}
+			ret = virtqueue_map_desc(*ctx->vq_id,&ctx->result->iovec[*ctx->out_num], false, ctx->desc->addr, ctx->desc->len, ctx->as);
+			if(ret)
+			{
+				bpf_printk("map error\n");
+				return 1;
+			}
+			*ctx->out_num = *ctx->out_num + 1;
+		}
+		if (!(ctx->desc->flags & VRING_DESC_F_NEXT))
+		{
+			*ctx->rc = VIRTQUEUE_READ_DESC_DONE;
+			return 1;
+		}
+
+		*ctx->head = ctx->desc->next;
+		if(ctx->desc_cache==NULL)
+			return 1;
+		vring_split_desc_read(ctx->desc_cache, *ctx->head,NULL,*ctx->vq_id,*ctx->out_num+*ctx->in_num);
+		*ctx->rc = VIRTQUEUE_READ_DESC_MORE;		
+		return 0;
+	}
+	else
+		return 1;
+}
 SEC("kprobe/__kvm_io_bus_write")
 int bpf_prog(struct pt_regs *ctx)
 {
@@ -783,7 +951,7 @@ int bpf_prog(struct pt_regs *ctx)
 	int arr_num = 0;
 	int req_num;
 	uint32_t type;
-	unsigned int max, i;
+	unsigned int i,iter;
 	struct kvm_io_bus *bus = (void *)PT_REGS_PARM2(ctx);
 	struct kvm_io_range *range = (void *)PT_REGS_PARM3(ctx);
 	dev_count = _(bus->dev_count);
@@ -791,6 +959,10 @@ int bpf_prog(struct pt_regs *ctx)
 	addr = _(range->addr);
 	len = _(range->len);
 	VRMRCS *vrmrc;
+	uint16_t head;
+	uint16_t cq_head;
+	uint32_t vq_id;
+	uint32_t *router; 
 	struct VirtQueue *vq;
 	struct VirtIODevice *vdev;
 	struct AddressSpace *as;
@@ -799,335 +971,267 @@ int bpf_prog(struct pt_regs *ctx)
 	struct Useraddr *user;
 	struct MemoryRegionCache *desc_cache;
 	Fast_map *result;
-	unsigned out_num, in_num, elem_entries;
+	uint32_t out_num, in_num;
+	uint64_t elem_entries,max;
 	out_num = in_num = elem_entries = 0;
 	uint32_t hd;
-	__u64 vq_addr = 0x5588aa92da50;
+	__u64 vq_addr = 0x55dcdf2b2b90;
 	struct virtio_blk_outhdr *req_out;
-	result = bpf_map_lookup_elem(&fast_map, &arr_num);
-	user = bpf_map_lookup_elem(&User_addr_map, &arr_num);
+	uint32_t num;
+	uint16_t last_avail_idx;
+	unsigned int idx;
+	uint16_t new;
+	struct vec_pop_ctx pop_ctx;
 
-	if (result && user)
+	if (addr >= 0xfe003000 && addr <= 0xfe00301c)
 	{
-		if (addr >= 0xfe003000 && addr <= 0xfe00301c)
-		{
-			long avail_data = bpf_ringbuf_query(&kernel_ringbuf, BPF_RB_AVAIL_DATA);
-			if(avail_data>4096*3000)
-			{
-				goto error;
-			}
-			ret = (addr - 0xfe003000) / 4;
 
-			req_num= copy_vq(ret, &user->last_avail_idx, &user->used_idx, &user->shadow_avail_idx,vq_addr);
-			if(!req_num)
+		
+		vq_id = (addr - 0xfe003000) / 4;
+		
+		if(vq_id>8&&vq_id<0)
+			return 0;
+		
+		result = bpf_map_lookup_elem(&fast_map, &vq_id);
+		
+		router = bpf_map_lookup_elem(&Router, &vq_id);
+		if(router == NULL)
+			return 0;
+		
+		if (result)
+		{	
+			*router = 0;
+			// bpf_printk("*****************\n");
+
+			req_num= copy_vq(vq_id, vq_addr);
+			if(req_num == 0)
 			{
-				// bpf_printk("**********!\n");
+
 				goto error;
 			}
 			if(req_num > 1)
 			{
-				bpf_printk("req num is  %u\n",req_num);
 				goto error;
 			}
 			
-			// copy the desc from the head vring
-			uint16_t head = vring_avail_ring();
 
-			vrmrc = bpf_map_lookup_elem(&VRMRC, &arr_num);
+			*router = req_num;
+			
+			head = vring_avail_ring(vq_id);
+			// bpf_printk("*router is  %u,req_num is %d,vq_id is %d\n",*router,req_num,vq_id);
+			cq_head = head;
+			i = head;
+			// bpf_printk("head is %u,\n", head);
+			num = cq_head + vq_id*256;
+			user = bpf_map_lookup_elem(&User_addr_map, &num);
+			if(user==NULL)
+				goto error;
+			__u64 addr = vq_addr + vq_id * 0x98;
+			hwaddr pa = offsetof(struct VirtQueue, last_avail_idx);
+			user->last_avail_idx = pa + addr;
+			pa = offsetof(struct VirtQueue, used_idx);
+			user->used_idx = pa + addr;
+			pa = offsetof(struct VirtQueue, shadow_avail_idx);
+			user->shadow_avail_idx = pa + addr;
+
+
+
+
+			vrmrc = bpf_map_lookup_elem(&VRMRC, &vq_id);
 			if (vrmrc)
 			{
-				 vring_split_desc_read_cache(&vrmrc->desc, head, NULL);
+				// vring_split_desc_read_cache(&vrmrc->desc, i, NULL,vq_id);
+				vring_split_desc_read(&vrmrc->desc, i, NULL,vq_id,0);
 			}
 
-		// 	// translate the address
-			vq = bpf_map_lookup_elem(&vq_map, &arr_num);
-
+			vq = bpf_map_lookup_elem(&vq_map, &vq_id);
+			
 			if (vq&&vrmrc)
 			{
-				//save the caches used addr used to update used elem
 				user->caches_used = vq->vring.caches;
 				user->vring_used = vrmrc->used.ptr;
-				
-				vdev = bpf_map_lookup_elem(&VDEV, &arr_num);
+				hwaddr pa = offsetof(VRingAvail, idx);
+				user->avail_idx = vrmrc->avail.ptr+pa;
+				vdev = bpf_map_lookup_elem(&VDEV, &vq_id);
 				if (vdev)
 				{
 					bpf_copy_from_user(vdev, sizeof(struct VirtIODevice), vq->vdev);
-
-					//save the isr addr used to update
 					hwaddr pa = offsetof(struct VirtIODevice, isr);
 					user->vdev_isr = (uint64_t)vq->vdev + pa;
-					// bpf_printk("user->vdev addr is %lx, pa is %lx, isr addr is %lx\n", vq->vdev, pa,user->vdev_isr);
-					as = bpf_map_lookup_elem(&AS, &arr_num);
-					descc = bpf_map_lookup_elem(&descs_cache, &arr_num);
-					if (as && descc)
+					as = bpf_map_lookup_elem(&AS, &vq_id);
+					num =  0+vq_id*40;;
+					descc = bpf_map_lookup_elem(&descs, &num);
+					if (as == NULL || descc == NULL)
+						goto error;
+					desc_cache = &vrmrc->desc;
+					if(desc_cache == NULL)
+						goto error;
+					if(descc->flags && VRING_DESC_F_INDIRECT)
 					{
-						bpf_copy_from_user(as, sizeof(struct AddressSpace), vdev->dma_as);
+						if(descc->addr==0)
+						{
+							bpf_printk("descc addr is %lu\n",descc->addr);
+						}
 						
-						uint32_t len = address_space_cache_init(as, descc->addr, descc->len, false);
-						// bpf_printk("len is %u\n",len);
+						bpf_copy_from_user(as, sizeof(struct AddressSpace), vdev->dma_as);
+						uint32_t len = address_space_cache_init(as, descc->addr, descc->len, false,vq_id);
+						if(len > 1000)
+						{
+							bpf_printk("len is %u\n",len);
+						}
+						// bpf_printk(",descc addr is %lx,desc len is %u,desc flag is %u\n",descc->addr,descc->len,descc->flags);
 						if (len < descc->len)
 						{
-							// bpf_printk("address_space_cache_init ERROR,len is %u,desc len is %u,desc flag is %u\n",len,descc->len,descc->flags);
+							bpf_printk("address_space_cache_init ERROR,len is %u,desc len is %u,desc flag is %u,head is %u\n",len,descc->len,descc->flags,cq_head);
 							goto error;
 						}
-						desc_cache = bpf_map_lookup_elem(&IDC, &arr_num);
+						desc_cache = bpf_map_lookup_elem(&IDC, &vq_id);
 						if (desc_cache)
 						{
-							max = desc->len / sizeof(struct VRingDesc);
-							// bpf_printk("max is %u\n",max);
-							if(max > 10)
+							max = descc->len / sizeof(struct VRingDesc);
+							if(max >40)
 							{
-								// bpf_printk("req is too larage, max is %u\n",max);
+								bpf_printk("req is too larage, max is %u\n",max);
 								goto error; 
 							}
 							i = 0;
-							vring_split_desc_read(desc_cache, i, NULL);
-							head = 0;
-							i = 10;
-							do{
-								desc = bpf_map_lookup_elem(&descs, &head);
-								if(desc)
-								{
-									// bpf_printk("order 0\n");
-									// bpf_printk("desc->addr is %lu, desc->len is %u\n",desc->addr, desc->len);
-	
-									if (desc->flags & VRING_DESC_F_WRITE)
-									{
-										if(out_num==0)
-										{
-											//bpf_printk("desc->addr is %lu, desc->len is %u\n",desc->addr, desc->len);
-										}
-										ret = virtqueue_map_desc(vdev, in_num + out_num, true, desc->addr, desc->len, as);
-										if(ret)
-											goto error;
-										in_num++;
-									}
-									else
-									{
-										if(in_num)
-										{
-											// bpf_printk("order is ERROR,max is %u out is %u, in is %u\n",max,out_num,in_num);
-											// bpf_printk("desc flags is %u\n",desc->flags );
-											// bpf_printk("head is %u\n",head);
-											goto error;
-										}
-										ret = virtqueue_map_desc(vdev, out_num, false, desc->addr, desc->len, as);
-										if(ret)
-											goto error;
-										out_num++;
-									}
-									elem_entries++;
-									if (!(desc->flags & VRING_DESC_F_NEXT))
-									{
-										rc = VIRTQUEUE_READ_DESC_DONE;
-										break;
-									}
-									head = desc->next;
-									vring_split_desc_read(desc_cache, head, &hd);
-									rc = VIRTQUEUE_READ_DESC_MORE;
-								}
-								i--;
-
-							}while (i>0&&rc==VIRTQUEUE_READ_DESC_MORE);
-							
+							vring_split_desc_read(desc_cache, i, NULL,vq_id,0);
 						}
+
+						head = i;
+						iter = 40;
+						pop_ctx.result = result;
+						pop_ctx.vq_id = &vq_id;
+						pop_ctx.rc = &rc;
+						pop_ctx.in_num = &in_num;
+						pop_ctx.out_num = &out_num;
+						pop_ctx.head = &head;
+						pop_ctx.desc = desc;
+						pop_ctx.as = as;
+						pop_ctx.desc_cache = desc_cache;
+						bpf_loop(iter, desc_pop_sub, &pop_ctx, 0);
+						elem_entries = in_num + out_num;
+						if(elem_entries != max)
+						{
+							bpf_printk("pop error \n");
+							bpf_printk("max is %u out is %u, in is %u\n",max, out_num, in_num);
+							bpf_printk("head is %u rc is %u\n",*pop_ctx.head, *pop_ctx.rc);
+							if(desc!=NULL)
+								bpf_printk("pop_ctx.desc flag is %u\n",desc->flags);
+				
+								
+
+							goto error;
+						}					
 					}
+					
 				}
+				//  *router = 0;
 				if(in_num + out_num < max)
 				{
-					// bpf_printk("max is %u out is %u, in is %u\n",max, out_num, in_num);
+					bpf_printk("max is %u out is %u, in is %u\n",max, out_num, in_num);
 					goto error;
 
 				}
-
+				
+				// bpf_printk("max is %u out is %u, in is %u\n",max, out_num, in_num);
 				result->in_num = in_num;
 				result->out_num = out_num;
-				req_out = bpf_map_lookup_elem(&outhdr, &arr_num);
+				req_out = bpf_map_lookup_elem(&outhdr, &vq_id);
 				if(req_out)
 				{
-					ret = iov_to_buf(0,0,req_out,sizeof(struct virtio_blk_outhdr));
+					ret = iov_to_buf(&result->iovec[0],0,req_out,sizeof(struct virtio_blk_outhdr));
 					if(ret!=sizeof(struct virtio_blk_outhdr))
 					{
-						// bpf_printk("Iov copy error !\n");
 						goto error;
 					}
-					 type =req_out->type;
-					 if(type == 4)
-					 {
-						bpf_printk("flush command\n");
-					 }
+					type =req_out->type;
+					if(type == 4)
+					{
+						 bpf_printk("flush command\n");
+						goto error;
+					}
+					result->type = type;
+					result->offset = req_out->sector*512;
+					result->id = cq_head+ vq_id*256;
+					result->wfd = vq->guest_notifier.wfd;
+					// bpf_printk("vq is %d, \n", vq_id);
 				}
-				bpf_ringbuf_output(&kernel_ringbuf,result,sizeof(Fast_map),0);
 
+				bpf_ringbuf_output(&kernel_ringbuf,result,sizeof(Fast_map),0);
+				
 				long avail_data = bpf_ringbuf_query(&kernel_ringbuf, BPF_RB_AVAIL_DATA);
 				long ring_size = bpf_ringbuf_query(&kernel_ringbuf, BPF_RB_RING_SIZE);
-				long cons_pos = bpf_ringbuf_query(&kernel_ringbuf, BPF_RB_CONS_POS);
-				long prod_pos = bpf_ringbuf_query(&kernel_ringbuf, BPF_RB_PROD_POS);
+				// long cons_pos = bpf_ringbuf_query(&kernel_ringbuf, BPF_RB_CONS_POS);
+				// long prod_pos = bpf_ringbuf_query(&kernel_ringbuf, BPF_RB_PROD_POS);
 
 				bpf_printk("The avail_data is %u, ring_size is %u\n",avail_data,ring_size);
-				bpf_printk("The cons_pos is %u, prod_pos is %u\n",cons_pos,prod_pos);
-				// if(avail_data>4096*1000)
+				// bpf_printk("The cons_pos is %u, prod_pos is %u\n",cons_pos,prod_pos);	
+
+				/*update the information*/
+
+				if(result->wfd < 33)
+					bpf_printk("result->wfd is %d,\n", result->wfd);
+				*router = 0;
+				if(*router)
+				{
+					
+					last_avail_idx = vq->last_avail_idx + 1;
+					// bpf_printk("vq is %d, vq last_avail_idx is %u\n", vq_id,last_avail_idx);
+					ret = bpf_probe_write_user(user->last_avail_idx, &last_avail_idx, sizeof(uint16_t));
+					if(ret<0)
+					{
+						bpf_printk("update the last_avail_idx error!\n");
+					}
+					
+					user->vring_num = vq->vring.num; //used for compute the idx
+					// bpf_printk("vq->vring.num is %d\n",vq->vring.num);
+					user->elem.id = cq_head;
+					user->elem.len = iov_size(&result->iovec[out_num],in_num);
+					user->wfd = vq->guest_notifier.wfd;;
+					
+					bpf_map_update_elem(&User_addr_map, &result->id, user, BPF_ANY);
+					// vring_set_avail_event(vq,user);
+					// idx = vq->used_idx % vq->vring.num;
+					// uelem.id = cq_head;
+					// uelem.len = iov_size(&result->iovec[out_num],in_num);
+					// bpf_printk("The uelem.len is %u\n",uelem.len);
+					// hwaddr pa = offsetof(VRingUsed, ring[idx]);
+					// bpf_printk("The cq_head is %u, vq is %u\n",cq_head,vq_id);
+					// // bpf_printk("ebpf\n");
+					// ret = bpf_probe_write_user(user->vring_used + pa, &uelem, sizeof(VRingUsedElem));
+					// if(ret<0)
+					// {
+					// 	bpf_printk("update the vring used_idxerror!\n");
+					// }
+					// new = vq->used_idx + 1;
+					// vring_used_idx_set(user, new);
+					// virtio_set_isr(vdev,user, 0x1);
+				}
+				// if(req_num>0)
 				// {
-				// 	bpf_printk("The need consume is %u",avail_data);
+				// 	req_num-=1;
+				// 	goto pop;
 				// }
-				
-				// if()
-		// 		int ii = 0;
-		// 		iov = bpf_map_lookup_elem(&IOVECS, &ii);
-		// 		add = bpf_map_lookup_elem(&ADDRS, &ii);
-		// 		if (iov && add)
-		// 		{
-		// 			result->iovec[0].iov_base = iov->iov_base;
-		// 			result->iovec[0].iov_len = iov->iov_len;
-					// result->addr[0] = *add;
-		// 			// bpf_printk("iov base is %lx: len is %u\n", result->iovec[0].iov_base, iov->iov_len);
-		// 		}
-		// 		ii = 1;
-		// 		iov = bpf_map_lookup_elem(&IOVECS, &ii);
-		// 		add = bpf_map_lookup_elem(&ADDRS, &ii);
-		// 		if (iov && add)
-		// 		{
-		// 			result->iovec[1].iov_base = iov->iov_base;
-		// 			result->iovec[1].iov_len = iov->iov_len;
-		// 			// if (iov->iov_len == 512)
-		// 			// 	result->fd = 22;
-		// 			// else
-		// 			// {
-		// 			// 	result->fd = 0;
-		// 			// 	return 0;
-		// 			// }
+				if(*router>256)
+				{
+					*router = 256;
+				}
+				// bpf_printk("+++++++++++++\n");
+				return 0;
+				// bpf_printk("got to normal 1 \n");
 
-		// 			result->addr[1] = *add;
-		// 			bpf_printk("iov base is %lx: len is %u\n", result->iovec[1].iov_base, iov->iov_len);
-		// 		}
-		// 		ii = 2;
-		// 		iov = bpf_map_lookup_elem(&IOVECS, &ii);
-		// 		add = bpf_map_lookup_elem(&ADDRS, &ii);
-		// 		if (iov && add)
-		// 		{
-		// 			result->iovec[2].iov_base = iov->iov_base;
-		// 			result->iovec[2].iov_len = iov->iov_len;
-		// 			result->addr[2] = *add;
-		// 			// bpf_printk("iov base is %lx: len is %u\n", result->iovec[2].iov_base, iov->iov_len);
-		// 		}
-		// 		result->fd = 0;
-		// 		result->wfd = vq->guest_notifier.wfd;
-
-				
-		
 			}
-		// else
-		// {
-		// 	result->fd = 0;
-		// }
-		return 0;
-
+error:
+			// bpf_printk("*****************\n");
+			*router = 0;
+			 return 0;
+			
 		}
-	error:
-		result->fd = 0;
-	}
 
-	
+	}
 	return 0;
 }
 
-// static __always_inline uint16_t vring_used_idx_set(struct Useraddr *user, uint16_t val) //
-// {
-// 	int ret = 0;
-// 	VRMRCS *caches;
-// 	caches = bpf_map_lookup_elem(&VRMRC, &ret);
-	
-// 	if (caches)
-// 	{
-// 		if (caches->used.len != 0)
-// 		{
-// 			hwaddr pa = offsetof(VRingUsed, idx);
-// 			ret = bpf_probe_write_user(user->vring_used + pa, &val, sizeof(val));
-// 			if(ret<0)
-// 			{
-// 				bpf_printk("update the vring used_idxerror!\n");
-// 			}
-			
-// 		}
-// 		ret = bpf_probe_write_user(user->used_idx, &val, sizeof(val));
-// 		if(ret<0)
-// 		{
-// 			bpf_printk("update the vring used_idxerror!\n");
-// 		}
-// 	}
 
-// 	return 0;
-// }
-// static __always_inline uint16_t virtio_set_isr(struct VirtIODevice *vdev,struct Useraddr *user, uint8_t value) //
-// {
-// 	uint8_t old = vdev->isr;
-// 	int ret;
-// 	if ((old & value) != value)
-// 	{
-// 		ret = bpf_probe_write_user(user->vdev_isr, &value, sizeof(uint8_t));
-// 		if(ret<0)
-// 		{
-// 			bpf_printk("update the vring used_idxerror!\n");
-// 		}
-// 	}
-
-// }
-
-// SEC("kretprobe/__kvm_io_bus_write")
-// int bpf_get_idx_ret(struct pt_regs *ctx)
-// {
-// 	unsigned int arr_num;
-// 	int ret;
-// 	struct VirtQueue *vq;
-// 	Fast_map *result;
-// 	VRMRCS *caches;
-// 	VRingUsedElem uelem;
-// 	struct VirtIODevice *vdev;
-// 	struct Useraddr *user;
-// 	uint16_t new;
-// 	arr_num = 0;
-// 	unsigned int idx;
-// 	uint16_t last_avail_idx;
-// 	int off = (int)PT_REGS_RC(ctx);
-// 	vq = bpf_map_lookup_elem(&vq_map, &arr_num);
-// 	result = bpf_map_lookup_elem(&fast_map, &arr_num);
-// 	caches = bpf_map_lookup_elem(&VRMRC, &arr_num);
-// 	vdev = bpf_map_lookup_elem(&VDEV, &arr_num);
-// 	user = bpf_map_lookup_elem(&User_addr_map, &arr_num);
-	
-// 	if (vq && result && user && vdev)
-// 	{
-// 		// bpf_printk("vq used idx is %u\n", vq->used_idx);
-		
-// 		if (off == 1111)
-// 		{
-	// qatomic_set(&d->mru_section, section); 不知道要不要补充
-// 			last_avail_idx = vq->last_avail_idx + 1;
-// 			ret = bpf_probe_write_user(user->last_avail_idx, &last_avail_idx, sizeof(uint16_t));
-// 			// bpf_printk("user->last_avail_idx is %u,addr is %lx\n", last_avail_idx, user->last_avail_idx);
-// 			if(ret<0)
-// 			{
-// 				bpf_printk("update the last_avail_idx error!\n");
-// 			}
-// 			vring_set_avail_event(vq,user);
-// 			idx = vq->used_idx % vq->vring.num;
-// 			uelem.id = result->head;
-// 			uelem.len = 578;
-// 			hwaddr pa = offsetof(VRingUsed, ring[idx]);
-// 			bpf_printk("ebpf\n");
-// 			ret = bpf_probe_write_user(user->vring_used + pa, &uelem, sizeof(VRingUsedElem));
-// 			if(ret<0)
-// 			{
-// 				bpf_printk("update the vring used_idxerror!\n");
-// 			}
-// 			new = vq->used_idx + 1;
-			
-// 			vring_used_idx_set(user, new);
-
-// 			virtio_set_isr(vdev,user, 0x1);
-// 		}
-
-// 	}
-// 	return 0;
-// }
 char _license[] SEC("license") = "GPL";
