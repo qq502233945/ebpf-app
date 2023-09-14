@@ -139,6 +139,9 @@ typedef struct NamedClockList NamedClockList;
 typedef struct NamedGPIOList NamedGPIOList;
 
 
+
+
+
 enum {
     VIRTQUEUE_READ_DESC_ERROR = -1,
     VIRTQUEUE_READ_DESC_DONE = 0,   /* end of chain */
@@ -754,5 +757,15 @@ struct vec_pop_ctx {
     AddressSpace *as;
     struct MemoryRegionCache *desc_cache;
 };
+
+struct req_pop_ctx {
+    uint32_t req_num;
+    uint32_t vq_id;
+    uint64_t vq_addr;
+    int error;
+};
+
+
+
 
 #endif

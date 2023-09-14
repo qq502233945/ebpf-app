@@ -1,5 +1,6 @@
 {
     "files.associations": {
+        "*.c": "c",
         "types.h": "c",
         "bpf_helpers.h": "c",
         "bpf_core_read.h": "c",
@@ -23,6 +24,30 @@
         "algorithm": "c",
         "map": "c",
         "optional": "c",
-        "system_error": "c"
+        "system_error": "c",
+        "cerrno": "c",
+        "trace_helpers.h": "c",
+        "libbpf.h": "c",
+        "libbpf_common.h": "c",
+        "libbpf_legacy.h": "c",
+        "libbpf_internal.h": "c",
+        "epoll.h": "c",
+        "time.h": "c",
+        "int128.h": "c",
+        "helpers.h": "c",
+        "fcntl.h": "c",
+        "compat.h": "c",
+        "liburing.h": "c",
+        "stat.h": "c",
+        "mman.h": "c",
+        "io_uring.h": "c",
+        "io_uring_version.h": "c",
+        "swab.h": "c",
+        "barrier.h": "c",
+        "syscall.h": "c",
+        "pthread.h": "c",
+        "memory": "c",
+        "limits": "c",
+        "thread": "c"
     }
 }

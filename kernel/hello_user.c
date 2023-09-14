@@ -44,62 +44,69 @@ static void sig_handler(int sig)
 
 static int handle_event(void *ctx, void *data, size_t data_sz)
 {
-	// result = data;
-
-	memcpy(result, data, sizeof(Fast_map));  
-	struct io_uring_sqe *sqe;
+	
+	Fast_map *res = data;
+	
+	
 	unsigned int req_size = 680;
 	int i=0;
 	int j =0;
 	int iov_num =0;
-	int ret;
+	int ret0,ret;
 	// printf("data size  is %u\n",data_sz);
+
 	for(i= 0; i<data_sz/req_size;i++ )
 	{
-		printf("result type  is %d, out is %d, in is %d\n",result[i].type,result[i].out_num,result[i].in_num);
-		iov_num = result[i].out_num+result[i].in_num - 2;
+		// printf("result type  is %d, out is %d, in is %d\n",result[i].type,result[i].out_num,result[i].in_num);
+		struct io_uring_sqe *sqe;
+		Fast_map *des_res;
+		des_res = result+ res[i].id;
+		// printf("res addr  is %lx, data addr is %lx,id is %u, des addr is %lx\n",&res[i],data,res[i].id, des_res );
+		memcpy(des_res, &res[i], sizeof(Fast_map));  
+		
+		iov_num = des_res->out_num+des_res->in_num - 2;
 		// for(j=0;j<iov_num;j++)
 		// {
-		// 	printf("offset is %lu\n",result[i].offset);
-		// 	printf("iov base is 0x%lx, byte is %lu\n",(uint64_t)result[i].iovec[1+j].iov_base,
-		// 		result[i].iovec[1+j].iov_len);
+		// 	printf("offset is %lu\n",res[i].offset);
+		// 	printf("iov base is 0x%lx, byte is %lu\n",(uint64_t)res[i].iovec[1+j].iov_base,
+		// 		res[i].iovec[1+j].iov_len);
 		// }
 		sqe = io_uring_get_sqe(ring);
 		if (!sqe) {
 			printf("sqe fail \n");
 			return 0;
 		}
-		// printf("submit!\n");
-		switch (result[i].type)
+		
+		switch (des_res->type)
 		{
 		case 0: // read
-			io_uring_prep_readv(sqe, 0,  &result[i].iovec[1],iov_num, result[i].offset);
+			io_uring_prep_readv(sqe, 0,  &des_res->iovec[1],iov_num, des_res->offset);
 			sqe->flags |= IOSQE_FIXED_FILE;
-			sqe->user_data = result->id;
+			sqe->user_data = des_res->id;
 			break;
 		case 1: // write
-			io_uring_prep_writev(sqe, 0, &result[i].iovec[1], iov_num,result[i].offset);
+			io_uring_prep_writev(sqe, 0,  &des_res->iovec[1],iov_num, des_res->offset);
 			sqe->flags |= IOSQE_FIXED_FILE;
-			sqe->user_data = result->id;
+			sqe->user_data = des_res->id;
 			break;
 		case 4: // flush
 			io_uring_prep_fsync(sqe,0,IORING_FSYNC_DATASYNC);
 			sqe->flags |= IOSQE_FIXED_FILE;
-			sqe->user_data = result->id;
+			sqe->user_data = des_res->id;
 			break;
 		// 	break;
 		default:
 			break;
 		}
 
-		sqe->user_data = 0;
-		ret = __io_uring_flush_sq_bpf(ring);
-		wait_to_comp += ret;
-		ret = io_uring_submit(ring);
-		if (ret != iov_num) {
-			printf("submit got %d, wanted %d\n", ret, iov_num);
-		}
-
+	 	// sqe->user_data = 0xFFFF;
+	}
+	ret0 = __io_uring_flush_sq_bpf(ring);
+	// printf("submit got %d \n",ret0);
+	wait_to_comp += ret0;
+	ret = io_uring_submit(ring);
+	if (ret != ret0) {
+		// printf("submit got %d, wanted %d\n", ret, ret0);
 	}
 	
 	// printf("*************\n");
@@ -125,8 +132,6 @@ int main(int argc, char **argv)
 	FILE *fp = fopen("/home/joer/data.bin", "rb");
 
 	ret = global_map_init(&user_map_fd,&router_fd);
-	printf("user_map_fd is %d.\n",user_map_fd);
-	printf("router_fd is %d.\n",router_fd);
 	if(!ret)
 		goto cleanup;
 
@@ -155,7 +160,7 @@ int main(int argc, char **argv)
 		
 		printf("shmat error 2\n");
 	}
-	trace_fd3 =  shmget((key_t)54321, sizeof(Fast_map), 0666);
+	trace_fd3 =  shmget((key_t)54321, 256*8*sizeof(Fast_map), 0666);
 	if (trace_fd3 == -1)
     {
         printf("shmget error 3\n");
@@ -163,26 +168,37 @@ int main(int argc, char **argv)
 	result = shmat(trace_fd3, addr3, 0);
 	if (buf == (void *)-1)
 	{
-		printf("shmat error 3\n");
+		printf("shmat error 3 1\n");
 	}
 
 	printf("ret is %d.\n",ret);
 	printf("kflags is %u.\n",*ring->sq.kflags);
-
-
-	
+	// if(*ring->sq.kflags == 1)
+	// {
+	// 	ret = io_uring_enter(ring->ring_fd, 0, 0, IORING_ENTER_SQ_WAKEUP, NULL);
+	// 	if (ret < 0) {
+	// 		printf("Error io_uring_enter..., ret is %d\n",ret);
+	// 	}
+	// }
+	// ret = io_uring_enter(ring->ring_fd, 0, 0, IORING_ENTER_SQ_WAKEUP, NULL);
+	// printf("io_uring_enter..., ret is %d\n",ret);
 	snprintf(filename, sizeof(filename), "%s_kern.o", argv[0]);
 	obj = bpf_object__open_file(filename, NULL);
 	if (libbpf_get_error(obj)) {
 		fprintf(stderr, "ERROR: opening BPF object file failed\n");
 		return 0;
 	}
-
 	prog = bpf_object__find_program_by_name(obj, "bpf_prog");
 	if (!prog) {
 		fprintf(stderr, "ERROR: finding a prog in obj file failed\n");
 		goto cleanup;
 	}
+
+	// prog = bpf_object__find_program_by_name(obj, "bpf_prog_count");
+	// if (!prog) {
+	// 	fprintf(stderr, "ERROR: finding a prog in obj file failed\n");
+	// 	goto cleanup;
+	// }
 
 
 	ringmap = bpf_object__find_map_by_name(obj, "kernel_ringbuf");
@@ -216,7 +232,7 @@ int main(int argc, char **argv)
 		goto cleanup;
 	}
 
-	/* load BPF program */
+	// /* load BPF program */
 	if (bpf_object__load(obj)) {
 		fprintf(stderr, "ERROR: loading BPF object file failed\n");
 		goto cleanup;
@@ -246,19 +262,19 @@ int main(int argc, char **argv)
 		goto cleanup;
 	}
 
-	int trace_fd3 = open(DEBUGFS "trace_pipe", O_RDONLY, 0);
-	if (trace_fd3 < 0)
-		goto cleanup;
-	printf("here is ok\n");
+	// int trace_fd3 = open(DEBUGFS "trace_pipe", O_RDONLY, 0);
+	// if (trace_fd3 < 0)
+	// 	goto cleanup;
+	// printf("here is ok\n");
 	struct io_uring_cqe *cqe;
 	while (!exiting) {
-		static char buf[4096];
-		ssize_t sz;
-		sz = read(trace_fd3, buf, sizeof(buf) - 1);
-		if (sz > 0) {
-			buf[sz] = 0;
-			puts(buf);
-		}
+		// static char buf[4096];
+		// ssize_t sz;
+		// sz = read(trace_fd3, buf, sizeof(buf) - 1);
+		// if (sz > 0) {
+		// 	buf[sz] = 0;
+		// 	puts(buf);
+		// }
 
 		ring_buffer__consume(rb);
 		// printf("process cqe\n");
@@ -267,12 +283,13 @@ int main(int argc, char **argv)
 			need_complete = io_uring_wait_cqe_bpf(ring,&cqe);
 			if(!need_complete)
 			{
-				// printf("cqe res = %d\n",cqe->res);
+				// printf("need_complete = %d\n",need_complete);
 				io_uring_cqe_seen(ring, cqe);
 				wait_to_comp--;
 			}
 		}
 		signal(SIGINT, sig_handler);
+		
 }
 
  cleanup:
@@ -339,3 +356,7 @@ int global_map_init(int *user_map_fd, int *router_fd)
 	*router_fd = fd2;
 	return 1;
 }
+
+
+//eventfd_ctx_fdget
+//eventfd_signal(p->eventfd, 1);
