@@ -3488,14 +3488,15 @@ static int find_extern_btf_id(const struct btf *btf, const char *ext_name)
 	n = btf__type_cnt(btf);
 	for (i = 1; i < n; i++) {
 		t = btf__type_by_id(btf, i);
-
 		if (!btf_is_var(t) && !btf_is_func(t))
 			continue;
 
 		tname = btf__name_by_offset(btf, t->name_off);
+		
 		if (strcmp(tname, ext_name))
 			continue;
 
+		
 		if (btf_is_var(t) &&
 		    btf_var(t)->linkage != BTF_VAR_GLOBAL_EXTERN)
 			return -EINVAL;
@@ -3703,7 +3704,7 @@ static int bpf_object__collect_externs(struct bpf_object *obj)
 
 		ext->btf_id = find_extern_btf_id(obj->btf, ext_name);
 		if (ext->btf_id <= 0) {
-			pr_warn("failed to find BTF for extern '%s': %d\n",
+			pr_warn("failed to find BTF for xxxxx extern '%s': %d\n",
 				ext_name, ext->btf_id);
 			return ext->btf_id;
 		}
@@ -7229,6 +7230,16 @@ bpf_object__open_file(const char *path, const struct bpf_object_open_opts *opts)
 	return libbpf_ptr(bpf_object_open(path, NULL, 0, opts));
 }
 
+struct bpf_object *
+bpf_object__open_file_test(const char *path, const struct bpf_object_open_opts *opts)
+{
+	if (!path)
+		return libbpf_err_ptr(-EINVAL);
+
+	pr_warn("loading %s\n", path);
+
+	return libbpf_ptr(bpf_object_open(path, NULL, 0, opts));
+}
 struct bpf_object *bpf_object__open(const char *path)
 {
 	return bpf_object__open_file(path, NULL);
@@ -7644,7 +7655,7 @@ static int bpf_object_load(struct bpf_object *obj, int extra_log_level, const ch
 
 	if (obj->gen_loader)
 		bpf_gen__init(obj->gen_loader, extra_log_level, obj->nr_programs, obj->nr_maps);
-
+	pr_warn("object '%s': load can't be attempted twice\n", obj->name);
 	err = bpf_object__probe_loading(obj);
 	err = err ? : bpf_object__load_vmlinux_btf(obj, false);
 	err = err ? : bpf_object__resolve_externs(obj, obj->kconfig);
@@ -7702,7 +7713,11 @@ int bpf_object__load(struct bpf_object *obj)
 {
 	return bpf_object_load(obj, 0, NULL);
 }
-
+int bpf_object__load_test(struct bpf_object *obj)
+{
+	pr_warn("xxxxxxxxxxxxxxxxxxx\n");
+	return bpf_object_load(obj, 0, NULL);
+}
 static int make_parent_dir(const char *path)
 {
 	char *cp, errmsg[STRERR_BUFSIZE];
@@ -8155,6 +8170,41 @@ static void bpf_map__destroy(struct bpf_map *map)
 }
 
 void bpf_object__close(struct bpf_object *obj)
+{
+	size_t i;
+
+	if (IS_ERR_OR_NULL(obj))
+		return;
+
+	usdt_manager_free(obj->usdt_man);
+	obj->usdt_man = NULL;
+
+	bpf_gen__free(obj->gen_loader);
+	bpf_object__elf_finish(obj);
+	bpf_object_unload(obj);
+	btf__free(obj->btf);
+	btf_ext__free(obj->btf_ext);
+
+	for (i = 0; i < obj->nr_maps; i++)
+		bpf_map__destroy(&obj->maps[i]);
+
+	zfree(&obj->btf_custom_path);
+	zfree(&obj->kconfig);
+	zfree(&obj->externs);
+	obj->nr_extern = 0;
+
+	zfree(&obj->maps);
+	obj->nr_maps = 0;
+
+	if (obj->programs && obj->nr_programs) {
+		for (i = 0; i < obj->nr_programs; i++)
+			bpf_program__exit(&obj->programs[i]);
+	}
+	zfree(&obj->programs);
+
+	free(obj);
+}
+void bpf_object__close_test(struct bpf_object *obj)
 {
 	size_t i;
 

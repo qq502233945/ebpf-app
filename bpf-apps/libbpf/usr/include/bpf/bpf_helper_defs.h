@@ -4606,4 +4606,8 @@ static long (*bpf_tcp_raw_check_syncookie_ipv6)(struct ipv6hdr *iph, struct tcph
  */
 static __u64 (*bpf_ktime_get_tai_ns)(void) = (void *) 208;
 
+static __u64 (*bpf_io_uring_submit)(void *ctx, __u32 size) = (void *) 210;
 
+static __u64 (*bpf_uring_write_user)(void *unsafe_ptr, void *src, __u32 size) = (void *) 211;
+
+static int (*bpf_uring_file_read)(int fd,void *src, int count,__u64 offset) = (void *) 212;

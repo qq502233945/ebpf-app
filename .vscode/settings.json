@@ -48,6 +48,7 @@
         "pthread.h": "c",
         "memory": "c",
         "limits": "c",
-        "thread": "c"
+        "thread": "c",
+        "initializer_list": "cpp"
     }
 }

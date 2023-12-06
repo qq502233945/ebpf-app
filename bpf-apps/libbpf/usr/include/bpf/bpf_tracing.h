@@ -74,16 +74,16 @@
 
 #if defined(__KERNEL__) || defined(__VMLINUX_H__)
 
-#define __PT_PARM1_REG di
-#define __PT_PARM2_REG si
-#define __PT_PARM3_REG dx
-#define __PT_PARM4_REG cx
+#define __PT_PARM1_REG rdi
+#define __PT_PARM2_REG rsi
+#define __PT_PARM3_REG rdx
+#define __PT_PARM4_REG rcx
 #define __PT_PARM5_REG r8
-#define __PT_RET_REG sp
-#define __PT_FP_REG bp
-#define __PT_RC_REG ax
-#define __PT_SP_REG sp
-#define __PT_IP_REG ip
+#define __PT_RET_REG rsp
+#define __PT_FP_REG rbp
+#define __PT_RC_REG rax
+#define __PT_SP_REG rsp
+#define __PT_IP_REG rip
 /* syscall uses r10 for PARM4 */
 #define PT_REGS_PARM4_SYSCALL(x) ((x)->r10)
 #define PT_REGS_PARM4_CORE_SYSCALL(x) BPF_CORE_READ(x, r10)

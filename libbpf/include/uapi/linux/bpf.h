@@ -5566,6 +5566,9 @@ union bpf_attr {
 	FN(tcp_raw_check_syncookie_ipv4),	\
 	FN(tcp_raw_check_syncookie_ipv6),	\
 	FN(ktime_get_tai_ns),		\
+	FN(user_ringbuf_drain),		\
+	FN(io_uring_submit),		\
+	FN(uring_write_user),		\
 	/* */
 
 /* integer value in 'imm' field of BPF_CALL instruction selects which helper

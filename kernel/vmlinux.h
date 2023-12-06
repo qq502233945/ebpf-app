@@ -221,11 +221,11 @@ typedef uintptr_t ram_addr_t;
 typedef uint64_t dma_addr_t;
 
 struct kvm_io_bus;
-
+struct io_ring_ctx;
 struct kvm_io_device;
 
 struct kvm_io_range {
-	__u64 addr;
+	uint64_t addr;
 	int len;
 	struct kvm_io_device *dev;
 };
@@ -602,8 +602,76 @@ struct VirtQueue //152
     bool host_notifier_enabled;
     QLIST_ENTRY(VirtQueue) node;
 };
-
-
+typedef int __bitwise __kernel_rwf_t;
+struct io_uring_sqe_bpf {
+	uint8_t	opcode;		/* type of operation for this sqe */
+	uint8_t	flags;		/* IOSQE_ flags */
+	uint16_t	ioprio;		/* ioprio for the request */
+	int32_t	fd;		/* file descriptor to do IO on */
+	union {
+		uint64_t	off;	/* offset into file */
+		uint64_t	addr2;
+		struct {
+			uint32_t	cmd_op;
+			uint32_t	__pad1;
+		};
+	};
+	union {
+		uint64_t	addr;	/* pointer to buffer or iovecs */
+		uint64_t	splice_off_in;
+	};
+	uint32_t	len;		/* buffer size or number of iovecs */
+	union {
+		__kernel_rwf_t	rw_flags;
+		uint32_t		fsync_flags;
+		uint16_t		poll_events;	/* compatibility */
+		uint32_t		poll32_events;	/* word-reversed for BE */
+		uint32_t		sync_range_flags;
+		uint32_t		msg_flags;
+		uint32_t		timeout_flags;
+		uint32_t		accept_flags;
+		uint32_t		cancel_flags;
+		uint32_t		open_flags;
+		uint32_t		statx_flags;
+		uint32_t		fadvise_advice;
+		uint32_t		splice_flags;
+		uint32_t		rename_flags;
+		uint32_t		unlink_flags;
+		uint32_t		hardlink_flags;
+		uint32_t		xattr_flags;
+		uint32_t		msg_ring_flags;
+		uint32_t		uring_cmd_flags;
+	};
+	uint64_t	user_data;	/* data to be passed back at completion time */
+	/* pack this to avoid bogus arm OABI complaints */
+	union {
+		/* index into fixed buffers, if used */
+		uint16_t	buf_index;
+		/* for grouped buffer selection */
+		uint16_t	buf_group;
+	} __attribute__((packed));
+	/* personality to use, if used */
+	uint16_t	personality;
+	union {
+		int32_t	splice_fd_in;
+		uint32_t	file_index;
+		struct {
+			uint16_t	addr_len;
+			uint16_t	__pad3[1];
+		};
+	};
+	union {
+		struct {
+			uint64_t	addr3;
+			uint64_t	__pad2[1];
+		};
+		/*
+		 * If the ring is initialized with IORING_SETUP_SQE128, then
+		 * this field is used for 80 bytes of arbitrary command data
+		 */
+		uint8_t	cmd[0];
+	};
+};
 
 typedef struct MemoryRegion {
     Object parent_obj;
@@ -643,6 +711,15 @@ typedef struct MemoryRegion {
     RamDiscardManager *rdm; /* Only for RAM */
 }MemoryRegion ;
 
+struct io_uring_bpf_ctx {
+	uint32_t	vq_num;
+    uint64_t	vq_addr;
+    uint64_t	L1Cache;
+	uint64_t	L2Cache;
+    uint8_t qemu_router;
+    int  begin;
+};
+
 typedef struct RAMBlock {
     struct rcu_head rcu;
     MemoryRegion *mr;
@@ -677,8 +754,35 @@ typedef struct subpage_t {
     uint16_t sub_section[];
 } subpage_t;
 
+typedef struct Qcow2CachedTable {
+    int64_t  offset;
+    uint64_t lru_counter;
+    int      ref;
+    bool     dirty;
+} Qcow2CachedTable;
+struct Qcow2Cache {
+    Qcow2CachedTable       *entries;
+    struct Qcow2Cache      *depends;
+    int                     size;
+    int                     table_size;
+    bool                    depends_on_flush;
+    void                   *table_array;
+    uint64_t                lru_counter;
+    uint64_t                cache_clean_lru_counter;
+};
+struct L2cache_find_ctx {
+    uint64_t entries_addr;
+    uint64_t offset;
+    int i;
+    int ret;
+    int size;
+    int lookup_index;
+    int min_lru_index;
+    uint64_t min_lru_counter;
+};
+
 typedef struct fast_map {
-    struct iovecc iovec[40];
+    struct iovecc iovec[256];
     uint32_t in_num;
     uint32_t out_num;
     uint32_t type;
@@ -715,6 +819,7 @@ typedef struct Useraddr
     uint64_t pa;
     uint32_t vring_num;
     uint32_t wfd;
+    uint32_t subreq_num;
     VRingUsedElem elem;
 } Useraddr;
 
@@ -724,9 +829,9 @@ struct host_extent_status {
 	uint64_t es_pblk;	/* first physical block */
 };
 struct virtio_blk_outhdr {
-	unsigned int 	ib_enable;
-	struct host_extent_status ib_es[15];
-	unsigned int 	ib_es_num;
+	// unsigned int 	ib_enable;
+	// struct host_extent_status ib_es[15];
+	// unsigned int 	ib_es_num;
 	/* VIRTIO_BLK_T* */
 	uint32_t type;
 	/* io priority. */
@@ -762,10 +867,54 @@ struct req_pop_ctx {
     uint32_t req_num;
     uint32_t vq_id;
     uint64_t vq_addr;
+    void *ctx;
     int error;
 };
 
+struct count_sc_ctx {
+    uint64_t *l2_slice;
+    unsigned *l2_index;
+    int  nb_clusters;
+    int  count;
+    int error;
+    int i;
+};
 
+struct count_s_w_c_ctx {
+    uint64_t *l2_slice;
+    int  l2_index;
+    uint64_t  l2_entry;
+    uint64_t  expected_offset;
+    int  nb_clusters;
+    int i;
+};
 
+struct qcow2_co_pwritev_ctx {
+    int64_t offset;
+    uint64_t host_offset;
+    int64_t bytes;
+    uint32_t curent_bytes;
+    Fast_map *qiov;
+    int64_t qiov_offset;
+    uint64_t L1Cache;
+    int64_t L2Cache;
+    uint32_t iter;
+    struct io_uring_bpf_ctx *ctxx;
+    void *map;
+};
+
+struct qcow2_co_preadv_ctx {
+    int64_t offset;
+    uint64_t host_offset;
+    int64_t bytes;
+    uint32_t curent_bytes;
+    Fast_map *qiov;
+    int64_t qiov_offset;
+    uint64_t L1Cache;
+    int64_t L2Cache;
+    uint32_t iter;
+    struct io_uring_bpf_ctx *ctxx;
+    void *map;
+};
 
 #endif

@@ -48,7 +48,7 @@ static int handle_event(void *ctx, void *data, size_t data_sz)
 	Fast_map *res = data;
 	
 	
-	unsigned int req_size = 680;
+	unsigned int req_size = 4136;
 	int i=0;
 	int j =0;
 	int iov_num =0;
@@ -68,6 +68,7 @@ static int handle_event(void *ctx, void *data, size_t data_sz)
 		// for(j=0;j<iov_num;j++)
 		// {
 		// 	printf("offset is %lu\n",res[i].offset);
+
 		// 	printf("iov base is 0x%lx, byte is %lu\n",(uint64_t)res[i].iovec[1+j].iov_base,
 		// 		res[i].iovec[1+j].iov_len);
 		// }
@@ -76,7 +77,7 @@ static int handle_event(void *ctx, void *data, size_t data_sz)
 			printf("sqe fail \n");
 			return 0;
 		}
-		
+		// printf("des_res->id is %u\n",des_res->id);
 		switch (des_res->type)
 		{
 		case 0: // read
@@ -120,18 +121,18 @@ int main(int argc, char **argv)
 	struct bpf_program *prog;
 	struct bpf_object *obj;
 	struct bpf_program *ret_prog;
-	struct bpf_map *map1,*map2,*ringmap,*usermap;
+	struct bpf_map *map1,*map2,*ringmap,*usermap,*map3,*map4;
 	u_int64_t addr1,addr2,addr3;
 
 	char filename[256];
 	int ret;
 	int err;
 	int ring_fd=-1;
-	int user_map_fd, router_fd,ringbuffer_fd;
+	int user_map_fd, router_fd,Qemurouter_fd,ringbuffer_fd,mapd_fd;
 	struct ring_buffer *rb = NULL;
 	FILE *fp = fopen("/home/joer/data.bin", "rb");
 
-	ret = global_map_init(&user_map_fd,&router_fd);
+	ret = global_map_init(&user_map_fd,&router_fd,&Qemurouter_fd,&mapd_fd);
 	if(!ret)
 		goto cleanup;
 
@@ -182,6 +183,8 @@ int main(int argc, char **argv)
 	// }
 	// ret = io_uring_enter(ring->ring_fd, 0, 0, IORING_ENTER_SQ_WAKEUP, NULL);
 	// printf("io_uring_enter..., ret is %d\n",ret);
+	
+
 	snprintf(filename, sizeof(filename), "%s_kern.o", argv[0]);
 	obj = bpf_object__open_file(filename, NULL);
 	if (libbpf_get_error(obj)) {
@@ -199,7 +202,11 @@ int main(int argc, char **argv)
 	// 	fprintf(stderr, "ERROR: finding a prog in obj file failed\n");
 	// 	goto cleanup;
 	// }
-
+	prog = bpf_object__find_program_by_name(obj, "bpf_prog");
+	if (!prog) {
+		fprintf(stderr, "ERROR: finding a prog in obj file failed\n");
+		goto cleanup;
+	}
 
 	ringmap = bpf_object__find_map_by_name(obj, "kernel_ringbuf");
 	if (!ringmap) {
@@ -213,7 +220,17 @@ int main(int argc, char **argv)
 	}
 
 	map2 = bpf_object__find_map_by_name(obj, "User_addr_map");
-	if (!map1) {
+	if (!map2) {
+		printf("Failed to load array of maps from test prog\n");
+		goto cleanup;
+	}
+	map3 = bpf_object__find_map_by_name(obj, "QemuRouter");
+	if (!map3 ) {
+		printf("Failed to load array of maps from test prog\n");
+		goto cleanup;
+	}
+	map4 = bpf_object__find_map_by_name(obj, "fast_map_d");
+	if (!map4 ) {
 		printf("Failed to load array of maps from test prog\n");
 		goto cleanup;
 	}
@@ -231,7 +248,20 @@ int main(int argc, char **argv)
 		printf("Failed to reuse_fd 2\n");
 		goto cleanup;
 	}
-
+	ret = bpf_map__reuse_fd(map3,Qemurouter_fd);
+	close(Qemurouter_fd);
+	if(ret < 0)
+	{
+		printf("Failed to reuse_fd 3\n");
+		goto cleanup;
+	}
+	ret = bpf_map__reuse_fd(map4,mapd_fd);
+	close(mapd_fd);
+	if(ret < 0)
+	{
+		printf("Failed to reuse_fd 4\n");
+		goto cleanup;
+	}
 	// /* load BPF program */
 	if (bpf_object__load(obj)) {
 		fprintf(stderr, "ERROR: loading BPF object file failed\n");
@@ -308,13 +338,17 @@ int main(int argc, char **argv)
 	return 0;
 }
 
-int global_map_init(int *user_map_fd, int *router_fd)
+int global_map_init(int *user_map_fd, int *router_fd,int *Qemurouter_fd,int *mapd_fd)
 {
-	int ret,fd1,fd2;
+	int ret,fd1,fd2,fd3,fd4;
 	const char *user_file ="/sys/fs/bpf/User_addr_map";
 	const char *user_router ="/sys/fs/bpf/Router";
+	const char *qemu_router ="/sys/fs/bpf/QemuRouter";
+	const char *map_d ="/sys/fs/bpf/map_d";
 	fd1 = bpf_obj_get(user_file);
 	fd2 = bpf_obj_get(user_router);
+	fd3 = bpf_obj_get(qemu_router);
+	fd4 = bpf_obj_get(map_d);
 	if(fd1<0)
 	{
 		printf("Failed to  user maps from BPFS, so create one\n");
@@ -352,8 +386,46 @@ int global_map_init(int *user_map_fd, int *router_fd)
 			return 0;
 		}
 	}
+	if(fd3<0)
+	{
+		printf("Failed to  user maps from BPFS, so create one\n");
+		fd3 = bpf_map_create(BPF_MAP_TYPE_ARRAY, "QemuRouter",
+					  sizeof(__u32), sizeof(__u32), 8, NULL);
+		if (fd3<0)
+		{
+			printf("usermap create error \n");
+			return 0;
+		}
+
+		ret = bpf_obj_pin(fd3,qemu_router);
+		if (ret<0)
+		{
+			printf("bpf_obj_pin error \n");
+			return 0;
+		}
+	}
+	if(fd4<0)
+	{
+		printf("Failed to  user maps from BPFS, so create one\n");
+		fd4= bpf_map_create(BPF_MAP_TYPE_ARRAY, "fast_map_d",
+					  sizeof(__u32), sizeof(Fast_map), 8*256, NULL);
+		if (fd4<0)
+		{
+			printf("usermap create error \n");
+			return 0;
+		}
+
+		ret = bpf_obj_pin(fd4,map_d);
+		if (ret<0)
+		{
+			printf("bpf_obj_pin error \n");
+			return 0;
+		}
+	}
 	*user_map_fd = fd1;
 	*router_fd = fd2;
+	*Qemurouter_fd = fd3;
+	*mapd_fd = fd4; 
 	return 1;
 }
 

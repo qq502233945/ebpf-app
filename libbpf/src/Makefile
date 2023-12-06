@@ -78,7 +78,7 @@ INSTALL = install
 DESTDIR ?=
 
 ifeq ($(filter-out %64 %64be %64eb %64le %64el s390x, $(shell uname -m)),)
-	LIBSUBDIR := lib64
+	LIBSUBDIR := lib
 else
 	LIBSUBDIR := lib
 endif
@@ -92,6 +92,7 @@ else
 endif
 PREFIX ?= /usr
 LIBDIR ?= $(PREFIX)/$(LIBSUBDIR)
+LIBDIR_x86 ?= $(PREFIX)/lib/x86_64-linux-gnu
 INCLUDEDIR ?= $(PREFIX)/include
 UAPIDIR ?= $(PREFIX)/include
 
@@ -150,7 +151,7 @@ define do_s_install
 	$(Q)cp -fR $1 '$(DESTDIR)$2'
 endef
 
-install: all install_headers install_pkgconfig
+install: all install_headers install_pkgconfig install_x86_64
 	$(call do_s_install,$(STATIC_LIBS) $(SHARED_LIBS),$(LIBDIR))
 
 install_headers:
@@ -164,6 +165,8 @@ install_uapi_headers:
 install_pkgconfig: $(PC_FILE)
 	$(call do_install,$(PC_FILE),$(LIBDIR)/pkgconfig,644)
 
+install_x86_64:
+	$(call do_s_install,$(STATIC_LIBS) $(SHARED_LIBS),$(LIBDIR_x86))
 clean:
 	$(call msg,CLEAN)
 	$(Q)rm -rf *.o *.a *.so *.so.* *.pc $(SHARED_OBJDIR) $(STATIC_OBJDIR)

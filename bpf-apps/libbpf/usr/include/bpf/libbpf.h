@@ -186,6 +186,8 @@ LIBBPF_API struct bpf_object *bpf_object__open(const char *path);
  */
 LIBBPF_API struct bpf_object *
 bpf_object__open_file(const char *path, const struct bpf_object_open_opts *opts);
+LIBBPF_API struct bpf_object *
+bpf_object__open_file_test(const char *path, const struct bpf_object_open_opts *opts);
 
 /**
  * @brief **bpf_object__open_mem()** creates a bpf_object by reading
@@ -203,9 +205,9 @@ bpf_object__open_mem(const void *obj_buf, size_t obj_buf_sz,
 
 /* Load/unload object into/from kernel */
 LIBBPF_API int bpf_object__load(struct bpf_object *obj);
-
+LIBBPF_API int bpf_object__load(struct bpf_object *obj);
 LIBBPF_API void bpf_object__close(struct bpf_object *object);
-
+LIBBPF_API void bpf_object__close_test(struct bpf_object *object);
 /* pin_maps and unpin_maps can both be called with a NULL path, in which case
  * they will use the pin_path attribute of each map (and ignore all maps that
  * don't have a pin_path set).
