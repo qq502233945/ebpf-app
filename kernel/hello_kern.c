@@ -993,6 +993,7 @@ static int virtqueue_split_pop(uint32_t index, void *ctxx)
 	struct req_pop_ctx *ctx;
 	struct virtio_blk_outhdr *req_out;
 	struct vec_pop_ctx pop_ctx;
+	struct Useraddr *avail;
 	struct io_uring_bpf_ctx *ctxxx = (struct io_uring_bpf_ctx *)ctxx;
 	if(ctxx==NULL)
 		goto error;
@@ -1008,6 +1009,7 @@ static int virtqueue_split_pop(uint32_t index, void *ctxx)
 	if(!ctx->req_num)
 	{
 		return 1;
+		
 	}
 	out_num = in_num = max = 0;
 	head = vring_avail_ring(vq_id);
@@ -1167,7 +1169,7 @@ static int virtqueue_split_pop(uint32_t index, void *ctxx)
 	user->elem.id = cq_head;
 	user->elem.len = iov_size(&result->iovec[1],out_num+in_num-1);
 	user->wfd = vq->guest_notifier.wfd;
-	user->subreq_num = 1;
+	user->subreq_num = 0;
 	// bpf_printk("avail_idx %lx,used_idx is %lx,caches_used is %lx\n",user->avail_idx,user->used_idx,user->caches_used);
 	
 	
@@ -1194,31 +1196,39 @@ static int virtqueue_split_pop(uint32_t index, void *ctxx)
 	bpf_map_update_elem(&User_addr_map, &result->id, user, BPF_ANY);
 	if(result->type==1)
 	{
-		user->subreq_num = qcow2_co_pwritev_part(result->offset,user->elem.len,result,ctxxx,ctxxx->L1Cache,ctxxx->L2Cache,&fast_map_d);
+		avail = bpf_map_lookup_elem(&avail_addr_map, &vq_id);
+		if(avail==NULL)
+			return 0;
+		addr_write(avail->vring_used,vq->last_avail_idx);
+		user->subreq_num = qcow2_co_pwritev_part(result->offset,user->elem.len,result,ctxxx,ctxxx->L1Cache,ctxxx->L2Cache,&fast_map_d,&User_addr_map,user);
 
 	}
 	else if(result->type==0)
 	{
-		user->subreq_num = qcow2_co_preadv_part(result->offset,user->elem.len,result,ctxxx,ctxxx->L1Cache,ctxxx->L2Cache,&fast_map_d);
+		avail = bpf_map_lookup_elem(&avail_addr_map, &vq_id);
+		if(avail==NULL)
+			return 0;
+		addr_write(avail->vring_used,vq->last_avail_idx);
+		user->subreq_num = qcow2_co_preadv_part(result->offset,user->elem.len,result,ctxxx,ctxxx->L1Cache,ctxxx->L2Cache,&fast_map_d,&User_addr_map,user);
 	}
 	else  //qcow2 sync
 	{
 
-		vq->last_avail_idx -= 1;
-		ret = bpf_uring_write_user(user->last_avail_idx, &vq->last_avail_idx, sizeof(uint16_t));
+		bpf_printk("sync requests!\n");
+		last_avail_idx -= 1;
+		ret = bpf_uring_write_user(user->last_avail_idx, &last_avail_idx, sizeof(uint16_t));
 		goto error;
 	}
 
-	bpf_map_update_elem(&User_addr_map, &result->id, user, BPF_ANY);
+	// bpf_map_update_elem(&User_addr_map, &result->id, user, BPF_ANY);
 	
-	bpf_map_update_elem(&fast_map_d, &result->id, result, BPF_ANY);
+	// bpf_map_update_elem(&fast_map_d, &result->id, result, BPF_ANY);
 
 	
 	
 	// if(vq_id < 10000)
 	// 	ret = bpf_io_uring_submit(ctxxx,vq_id);
 	// 	bpf_printk("bpf_io_uring_submit ret is %d\n",ret);
-	ctx->error = 0; 
 	return 0;
 		
 error:
@@ -1242,16 +1252,19 @@ int bpf_prog(struct io_uring_bpf_ctx *ctx)
 	struct req_pop_ctx *req_pop_ctx;
 	uint32_t *router; 
 	uint32_t *Qemurouter; 
-	struct Useraddr *avail;
+	
 	uint32_t vq_id=0;
 	vq_id = ctx->vq_num;
 	struct VirtQueue *vq;
 
-	if(ctx->begin>300)
+
+	return 0;
+	if(ctx->begin>100)
 	{
 		bpf_printk("ctx->begin is %u\n",ctx->begin);
 		return 0;
 	}
+
 	// bpf_printk("********\n");
 	
 	req_pop_ctx = bpf_map_lookup_elem(&req_pop, &vq_id);
@@ -1259,9 +1272,9 @@ int bpf_prog(struct io_uring_bpf_ctx *ctx)
 		return 0;
 	 
 	
-	router = bpf_map_lookup_elem(&Router, &vq_id);
-	if(router == NULL)
-		return 0;
+	// router = bpf_map_lookup_elem(&Router, &vq_id);
+	// if(router == NULL)
+	// 	return 0;
 	// bpf_printk("vq is %u,router is %d, ctx addr is \n",vq_id,*router,(uint64_t)ctx);
 
 	copy_vq(vq_id, vq_addr);
@@ -1277,9 +1290,7 @@ int bpf_prog(struct io_uring_bpf_ctx *ctx)
 	req_pop_ctx = bpf_map_lookup_elem(&req_pop, &vq_id);
 	if(req_pop_ctx == NULL)
 		return 0;
-	avail = bpf_map_lookup_elem(&avail_addr_map, &vq_id);
-	if(avail==NULL)
-		return 0;
+
 	vq = bpf_map_lookup_elem(&vq_map, &vq_id);
 	if(vq==NULL)
 		return 0;
@@ -1287,17 +1298,16 @@ int bpf_prog(struct io_uring_bpf_ctx *ctx)
 	
 
 	ctx->qemu_router = 0;
-	// return 0;
 	if(req_pop_ctx->error<0){
-		*router =0;
+		// *router =0;
 		ctx->qemu_router = 0;
-		bpf_printk("interupted! error is %u\n",*router);
-		bpf_map_update_elem(&Router, &vq_id, router, BPF_ANY);
+		// bpf_printk("interupted! error is %u\n",*router);
+		// bpf_map_update_elem(&Router, &vq_id, router, BPF_ANY);
 		goto error;
 	}
 	else
 	{
-		addr_write(avail->vring_used,vq->last_avail_idx);
+		
 		// bpf_printk("skip the qemu\n");
 		ctx->qemu_router = 1;
 	}
@@ -1332,88 +1342,6 @@ int bpf_prog_count(struct pt_regs *ctx)
 	}
 
 }
-
-// SEC("kprobe/__kvm_io_bus_write")
-// int bpf_prog(struct pt_regs *ctx)
-// {
-// 	__u64 addr;
-// 	int ret;
-// 	int req_num;
-// 	int ioeventfd_count;
-// 	struct kvm_io_range *range = (void *)PT_REGS_PARM3(ctx);
-// 	struct kvm_io_bus *bus = (void *)PT_REGS_PARM2(ctx);
-// 	addr = _(range->addr);
-// 	ioeventfd_count = _(bus->ioeventfd_count);
-// 	uint64_t vq_addr = 0x557057d35a50;
-// 	struct req_pop_ctx *req_pop_ctx;
-// 	uint32_t *router; 
-// 	uint32_t vq_id=0;
-// 	uint32_t *in_use;
-
-	
-// 	if (addr >= 0xfe003000 && addr <= 0xfe00301c)
-// 	{
-
-
-// 		// bpf_printk("interupted!\n");	
-// 		vq_id = (addr - 0xfe003000) / 4;
-// 		if(vq_id>8&&vq_id<0)
-// 			return 0;
-// 		req_pop_ctx = bpf_map_lookup_elem(&req_pop, &vq_id);
-// 		if(req_pop_ctx == NULL)
-// 			return 0;
-// 		in_use = bpf_map_lookup_elem(&vq_inuse, &vq_id);
-// 		if(in_use == NULL)
-// 			return 0;
-// 		// bpf_printk("vq in use is %u",*in_use);
-// 		if(*in_use==1)
-// 		{
-// 			bpf_printk("reuse the vq!");
-// 		}
-// 		*in_use=1;
-// 		router = bpf_map_lookup_elem(&Router, &vq_id);
-// 		if(router == NULL)
-// 			return 0;
-		
-// 		*router = 0;
-		
-// 		copy_vq(vq_id, vq_addr);
-// 		// *router = req_num;
-		
-// 		req_pop_ctx->vq_id = vq_id;
-// 		req_pop_ctx->error = 1;
-// 		req_pop_ctx->vq_addr = vq_addr;
-// 		bpf_loop(256, virtqueue_split_pop, &vq_id, 0);
-
-
-// 		req_pop_ctx = bpf_map_lookup_elem(&req_pop, &vq_id);
-// 		if(req_pop_ctx == NULL)
-// 			return 0;
-
-// 		if(req_pop_ctx->error==0)
-// 		{
-// 			*router =1;
-
-// 		}
-// 		else if (req_pop_ctx->error<0){
-// 			goto error;
-// 		}
-
-// 		// *router =0;
-// 		// bpf_printk("router is %u,\n", *router);
-// 		*in_use=0;
-// 		return 0;
-
-// error:
-// 			// bpf_printk("*****************\n");
-// 			*in_use=0;
-// 			*router = 0;
-// 			 return 0;
-			
-
-// 	}
-// 	return 0;
-// }
 
 SEC("iouring")
 int iourng_prog(struct io_uring_bpf_ctx *ctx)

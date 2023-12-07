@@ -717,7 +717,7 @@ struct io_uring_bpf_ctx {
     uint64_t	L1Cache;
 	uint64_t	L2Cache;
     uint8_t qemu_router;
-    int  begin;
+    int    begin;
 };
 
 typedef struct RAMBlock {
@@ -895,12 +895,14 @@ struct qcow2_co_pwritev_ctx {
     int64_t bytes;
     uint32_t curent_bytes;
     Fast_map *qiov;
+    struct Useraddr *user;
     int64_t qiov_offset;
     uint64_t L1Cache;
     int64_t L2Cache;
     uint32_t iter;
     struct io_uring_bpf_ctx *ctxx;
     void *map;
+    void *user_map;
 };
 
 struct qcow2_co_preadv_ctx {
@@ -909,12 +911,14 @@ struct qcow2_co_preadv_ctx {
     int64_t bytes;
     uint32_t curent_bytes;
     Fast_map *qiov;
+    struct Useraddr *user;
     int64_t qiov_offset;
     uint64_t L1Cache;
     int64_t L2Cache;
     uint32_t iter;
     struct io_uring_bpf_ctx *ctxx;
     void *map;
+    void *user_map;
 };
 
 #endif

@@ -383,10 +383,10 @@ static __always_inline uint64_t qcow2_cache_get(uint64_t L2cache_addr, uint64_t 
         /*update the LRU_counter*/
         /*qcow2_cache_put logical*/
 
-        // c.lru_counter++;
-        // bpf_uring_write_user((uint64_t)&c.entries[ctxx.i].lru_counter,&c.lru_counter,sizeof(uint64_t));
-        // hwaddr pa = offsetof(struct Qcow2Cache, lru_counter);
-        //  bpf_uring_write_user((uint64_t)L2cache_addr+pa,&c.lru_counter,sizeof(uint64_t));
+        c.lru_counter++;
+        bpf_uring_write_user((uint64_t)&c.entries[ctxx.i].lru_counter,&c.lru_counter,sizeof(uint64_t));
+        hwaddr pa = offsetof(struct Qcow2Cache, lru_counter);
+         bpf_uring_write_user((uint64_t)L2cache_addr+pa,&c.lru_counter,sizeof(uint64_t));
         
         return l2_entry;
     
@@ -683,11 +683,23 @@ static __always_inline long pwritev_loop(uint32_t index,void *ctxx)
         bpf_printk("qcow2_co_pwritev_ppwritev_loop \n");
         bpf_printk("qcow2_co_pwritev_part multi,host_offset is %lx,i is %ld, ctx->offset %u,  ctx->bytes is %ld\n",ctx->host_offset,ctx->offset,ctx->curent_bytes,ctx->bytes);
     }
-    bpf_printk("qcow2_co_pwritev_part, host_offset is %lx,offset is %ld, cur_bytes is %u,  qiov_offset is %lx\n",ctx->host_offset,ctx->offset,ctx->curent_bytes,ctx->qiov_offset);
+    // bpf_printk("qcow2_co_pwritev_part, host_offset is %lx,offset is %ld, cur_bytes is %u,  qiov_offset is %lx\n",ctx->host_offset,ctx->offset,ctx->curent_bytes,ctx->qiov_offset);
+
     ctx->qiov->offset = ctx->host_offset;
-    bpf_map_update_elem(ctx->map, &ctx->qiov->id, ctx->qiov, BPF_ANY);
-	if(ctx->qiov->id < 10000)
-		ret = bpf_io_uring_submit(ctx->ctxx,ctx->qiov->id,ctx->qiov_offset,ctx->curent_bytes);
+    bpf_map_update_elem(ctx->map, &ctx->qiov->id, ctx->qiov, BPF_ANY);   
+
+    if(ctx->bytes == ctx->curent_bytes)
+    {
+        bpf_map_update_elem(ctx->user_map, &ctx->qiov->id, ctx->user, BPF_ANY);
+       	if(ctx->qiov->id < 10000)
+		    ret = bpf_io_uring_submit(ctx->ctxx,ctx->qiov->id,ctx->qiov_offset,ctx->curent_bytes,1);
+    } 
+    else
+    {
+        if(ctx->qiov->id < 10000)
+		    ret = bpf_io_uring_submit(ctx->ctxx,ctx->qiov->id,ctx->qiov_offset,ctx->curent_bytes,0);
+    }
+
 
     ctx->bytes -= ctx->curent_bytes;
     ctx->offset += ctx->curent_bytes;
@@ -702,7 +714,7 @@ static __always_inline long pwritev_loop(uint32_t index,void *ctxx)
 }
 
 static __always_inline  int qcow2_co_pwritev_part(int64_t offset, int64_t bytes,
-        Fast_map *qiov, struct io_uring_bpf_ctx *ctxx,uint64_t L1Cache, uint64_t L2Cache,void* map)
+        Fast_map *qiov, struct io_uring_bpf_ctx *ctxx,uint64_t L1Cache, uint64_t L2Cache,void* map,void* user_map,struct Useraddr *user)
 {
     int offset_in_cluster;
     int ret;
@@ -721,6 +733,8 @@ static __always_inline  int qcow2_co_pwritev_part(int64_t offset, int64_t bytes,
     ctx.L2Cache = L2Cache;
     ctx.ctxx = ctxx;
     ctx.map = map;
+    ctx.user_map = user_map;
+    ctx.user = user;
     bpf_loop(5, pwritev_loop, &ctx, 0);
     return ctx.iter;
 }
@@ -747,12 +761,23 @@ static __always_inline long preadv_loop(uint32_t index,void *ctxx)
         bpf_printk("current_byte is %u, bytes is %ld\n",ctx->curent_bytes,ctx->bytes);
     }
 
-    bpf_printk("qcow2_co_preadv_part, host_offset is %lx,offset is %ld, cur_bytes is %u,  qiov_offset is %lx\n",ctx->host_offset,ctx->offset,ctx->curent_bytes,ctx->qiov_offset);
+    // bpf_printk("qcow2_co_preadv_part, host_offset is %lx,offset is %ld, cur_bytes is %u,  qiov_offset is %lx\n",ctx->host_offset,ctx->offset,ctx->curent_bytes,ctx->qiov_offset);
 
     ctx->qiov->offset = ctx->host_offset;
-    bpf_map_update_elem(ctx->map, &ctx->qiov->id, ctx->qiov, BPF_ANY);
-	if(ctx->qiov->id < 10000)
-		ret = bpf_io_uring_submit(ctx->ctxx,ctx->qiov->id,ctx->qiov_offset,ctx->curent_bytes);
+    bpf_map_update_elem(ctx->map, &ctx->qiov->id, ctx->qiov, BPF_ANY);   
+
+    if(ctx->bytes == ctx->curent_bytes)
+    {
+        bpf_map_update_elem(ctx->user_map, &ctx->qiov->id, ctx->user, BPF_ANY);
+       	if(ctx->qiov->id < 10000)
+		    ret = bpf_io_uring_submit(ctx->ctxx,ctx->qiov->id,ctx->qiov_offset,ctx->curent_bytes,1);
+    } 
+    else
+    {
+        if(ctx->qiov->id < 10000)
+		    ret = bpf_io_uring_submit(ctx->ctxx,ctx->qiov->id,ctx->qiov_offset,ctx->curent_bytes,0);
+    }
+
 	// 	bpf_printk("bpf_io_uring_submit ret is %d\n",ret);
     ctx->bytes -= ctx->curent_bytes;
     ctx->offset += ctx->curent_bytes;
@@ -768,7 +793,7 @@ static __always_inline long preadv_loop(uint32_t index,void *ctxx)
 
 
 static __always_inline  int qcow2_co_preadv_part(int64_t offset, int64_t bytes,
-        Fast_map *qiov, struct io_uring_bpf_ctx *ctxx,uint64_t L1Cache, uint64_t L2Cache,void* map)
+        Fast_map *qiov, struct io_uring_bpf_ctx *ctxx,uint64_t L1Cache, uint64_t L2Cache,void* map,void* user_map,struct Useraddr *user)
 {
     int offset_in_cluster;
     int ret;
@@ -787,6 +812,8 @@ static __always_inline  int qcow2_co_preadv_part(int64_t offset, int64_t bytes,
     ctx.L2Cache = L2Cache;
     ctx.ctxx = ctxx;
     ctx.map = map;
+    ctx.user_map = user_map;
+    ctx.user = user;
     bpf_loop(5, preadv_loop, &ctx, 0);
     return ctx.iter;
 }
