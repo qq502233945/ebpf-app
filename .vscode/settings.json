@@ -49,6 +49,10 @@
         "memory": "c",
         "limits": "c",
         "thread": "c",
-        "initializer_list": "cpp"
+        "initializer_list": "cpp",
+        "deque": "c",
+        "unordered_map": "c",
+        "vector": "c",
+        "stdbool.h": "c"
     }
 }

@@ -447,8 +447,8 @@ static __always_inline int count_contiguous_subclusters(int nb_clusters, uint32_
     uint64_t expected_offset = 0;
     
     struct count_sc_ctx ctx;
-    if(nb_clusters>10)
-        return 0;
+    // if(nb_clusters>10)
+    //     return 0;
     ctx.count = 0;
     ctx.l2_slice = l2_slice;
     ctx.l2_index = l2_index;
@@ -579,18 +579,27 @@ static __always_inline int count_single_write_clusters(int nb_clusters,
     bpf_loop(10, count_single_write_clusters_sub, &ctx, 0);
     return ctx.i;
 }
-static __always_inline uint64_t get_cluster_table(uint64_t offset, uint64_t **new_l2_slice, int *new_l2_index,uint64_t L1Cache, uint64_t L2Cache)
+static __always_inline uint64_t get_cluster_table(uint64_t offset, uint64_t **new_l2_slice, int *new_l2_index,uint64_t L1Cache, uint64_t L2Cache,int *ret)
 {
     unsigned int l2_index;
     uint64_t l1_index, l2_offset=0;
     uint64_t *l2_slice = NULL;
-    int ret;
     int start_of_slice;
     uint64_t l2_entry=0;
     l1_index = offset_to_l1_index(offset);
     if(L1Cache!=NULL)
 	    bpf_copy_from_user(&l2_offset, sizeof(uint64_t), (uint64_t *)(L1Cache)+l1_index);
+    if(!(l2_offset&QCOW_OFLAG_COPIED))
+    {
+         /* First allocate a new L2 table (and do COW if needed) */
+         *ret = 111;
+
+    }
     l2_offset = l2_offset& L1E_OFFSET_MASK;
+
+    
+
+
     start_of_slice= start_of_slcice(offset);
 
     // bpf_printk("start_of_slice is %d",start_of_slice);
@@ -618,7 +627,12 @@ static __always_inline int handle_copied(uint64_t guest_offset, uint64_t *host_o
     l2_index = offset_to_l2_slice_index(guest_offset);
     nb_clusters = MIN(nb_clusters, l2_slice_size - l2_index);
     //bpf_printk("nb_clusters  2 is %ld\n",nb_clusters);
-    l2_entry = get_cluster_table(guest_offset, &l2_slice, &l2_index,L1Cache,L2Cache);
+    l2_entry = get_cluster_table(guest_offset, &l2_slice, &l2_index,L1Cache,L2Cache,&ret);
+    if(ret=111)
+    {
+        ret = 0;
+        goto out;
+    }
     cluster_offset = l2_entry & L2E_OFFSET_MASK;
     // bpf_printk("cluster_offset is %lx\n",cluster_offset);
     if(!cluster_needs_new_alloc(l2_entry))
@@ -626,6 +640,7 @@ static __always_inline int handle_copied(uint64_t guest_offset, uint64_t *host_o
         if (*host_offset != INV_OFFSET && cluster_offset != *host_offset) {
             *bytes = 0;
             ret = 0;
+            bpf_printk("cluster_needs_new_alloc\n");
             goto out;
         }
 
@@ -637,7 +652,8 @@ static __always_inline int handle_copied(uint64_t guest_offset, uint64_t *host_o
     }
     else
     {
-
+        ret = 0;
+        goto out;
     }
     out:
         if (ret > 0) {
@@ -659,10 +675,18 @@ static __always_inline int qcow2_alloc_host_offset(uint64_t offset, unsigned int
     cur_bytes = remaining;
 
     ret = handle_copied(offset,&cluster_offset,&cur_bytes,L1Cache,L2Cache);
-    *bytes = cur_bytes;
-    if(ret == 0)
-        cluster_offset += remaining;
-    *host_offset = cluster_offset;
+    if(ret)
+    {
+        *bytes = cur_bytes;
+        *host_offset = cluster_offset;
+        // bpf_printk("cluster_offset is bytes %lx\n",cluster_offset);
+        return 0;
+    }
+    else
+    {
+        return -1;
+    }
+
     // bpf_printk("cluster_offset is bytes %lx\n",cluster_offset);
     return 0;
 }
@@ -677,12 +701,17 @@ static __always_inline long pwritev_loop(uint32_t index,void *ctxx)
     offset_in_cluster = offset_into_cluster(ctx->offset);
     ctx->curent_bytes = MIN(ctx->bytes,0xFFFFFF);
     ret = qcow2_alloc_host_offset(ctx->offset, &ctx->curent_bytes, &ctx->host_offset,ctx->L1Cache,ctx->L2Cache);
-        // bpf_printk("qcow2_co_pwritev_part multi,host_offset is %lx,i is %ld, ctx->offset %u,  ctx->bytes is %ld\n",ctx->host_offset,ctx->offset,ctx->curent_bytes,ctx->bytes);
-    if(index>0)
+    if(ret<0)
     {
-        bpf_printk("qcow2_co_pwritev_ppwritev_loop \n");
-        bpf_printk("qcow2_co_pwritev_part multi,host_offset is %lx,i is %ld, ctx->offset %u,  ctx->bytes is %ld\n",ctx->host_offset,ctx->offset,ctx->curent_bytes,ctx->bytes);
+        ctx->need_alloc = 1;
+        return 1;
     }
+    // bpf_printk("pwritev_part index is %u,offset is %ld, curent_bytes %u,  ctx->bytes is %ld\n",index,ctx->offset,ctx->curent_bytes,ctx->bytes);
+    // if(index>0)
+    // {
+    //     bpf_printk("qcow2_co_pwritev_ppwritev_loop \n");
+    //     bpf_printk("qcow2_co_pwritev_part multi,host_offset is %lx,i is %ld, ctx->offset %u,  ctx->bytes is %ld\n",ctx->host_offset,ctx->offset,ctx->curent_bytes,ctx->bytes);
+    // }
     // bpf_printk("qcow2_co_pwritev_part, host_offset is %lx,offset is %ld, cur_bytes is %u,  qiov_offset is %lx\n",ctx->host_offset,ctx->offset,ctx->curent_bytes,ctx->qiov_offset);
 
     ctx->qiov->offset = ctx->host_offset;
@@ -690,12 +719,18 @@ static __always_inline long pwritev_loop(uint32_t index,void *ctxx)
 
     if(ctx->bytes == ctx->curent_bytes)
     {
+        // bpf_printk("NOTIFY host_offset is %lx,offset is %ld, cur_bytes is %u,  qiov_offset is %lx\n",\
+        ctx->host_offset,ctx->offset,ctx->curent_bytes,ctx->qiov_offset);
+
         bpf_map_update_elem(ctx->user_map, &ctx->qiov->id, ctx->user, BPF_ANY);
        	if(ctx->qiov->id < 10000)
-		    ret = bpf_io_uring_submit(ctx->ctxx,ctx->qiov->id,ctx->qiov_offset,ctx->curent_bytes,1);
+		    ret = bpf_io_uring_submit(ctx->ctxx,ctx->qiov->id,ctx->qiov_offset,ctx->curent_bytes,NOTIFY);
     } 
     else
     {
+        // bpf_printk("Slience host_offset is %lx,offset is %ld, cur_bytes is %u,  qiov_offset is %lx\n",\
+        ctx->host_offset,ctx->offset,ctx->curent_bytes,ctx->qiov_offset);
+        
         if(ctx->qiov->id < 10000)
 		    ret = bpf_io_uring_submit(ctx->ctxx,ctx->qiov->id,ctx->qiov_offset,ctx->curent_bytes,0);
     }
@@ -735,7 +770,10 @@ static __always_inline  int qcow2_co_pwritev_part(int64_t offset, int64_t bytes,
     ctx.map = map;
     ctx.user_map = user_map;
     ctx.user = user;
-    bpf_loop(5, pwritev_loop, &ctx, 0);
+    ctx.need_alloc = 0;
+    bpf_loop(30, pwritev_loop, &ctx, 0);
+    if(ctx.need_alloc==1)
+        return -1;
     return ctx.iter;
 }
 
@@ -750,16 +788,16 @@ static __always_inline long preadv_loop(uint32_t index,void *ctxx)
     ret = qcow2_get_host_offset(ctx->offset, &ctx->curent_bytes, &ctx->host_offset,ctx->L1Cache,ctx->L2Cache);
         // bpf_printk("qcow2_co_readv_part multi,host_offset is %lx,i is %ld, ctx->offset %u,  ctx->bytes is %ld\n",ctx->host_offset,ctx->offset,ctx->curent_bytes,ctx->bytes);
     // bpf_printk("current_byte is %u, bytes is %ld\n",ctx->curent_bytes,ctx->bytes);
-    if(index>0)
-    {
-        bpf_printk("qcow2_co_readv_part \n");
-        bpf_printk("qcow2_co_readv_part multi,host_offset is %lx,i is %ld, ctx->offset %u,  ctx->bytes is %ld\n",ctx->host_offset,ctx->offset,ctx->curent_bytes,ctx->bytes);
-    }
-    if( ctx->bytes!=ctx->curent_bytes)
-    {
-        bpf_printk("Error! mutiloop preadv\n");
-        bpf_printk("current_byte is %u, bytes is %ld\n",ctx->curent_bytes,ctx->bytes);
-    }
+    // if(index>0)
+    // {
+    //     bpf_printk("qcow2_co_readv_part \n");
+    //     bpf_printk("qcow2_co_pwritev_part multi,host_offset is %lx,i is %ld, ctx->offset %u,  ctx->bytes is %ld\n",ctx->host_offset,ctx->offset,ctx->curent_bytes,ctx->bytes);
+    // }
+    // if( ctx->bytes!=ctx->curent_bytes)
+    // {
+    //     bpf_printk("Error! mutiloop preadv\n");
+    //     bpf_printk("current_byte is %u, bytes is %ld\n",ctx->curent_bytes,ctx->bytes);
+    // }
 
     // bpf_printk("qcow2_co_preadv_part, host_offset is %lx,offset is %ld, cur_bytes is %u,  qiov_offset is %lx\n",ctx->host_offset,ctx->offset,ctx->curent_bytes,ctx->qiov_offset);
 
@@ -768,12 +806,16 @@ static __always_inline long preadv_loop(uint32_t index,void *ctxx)
 
     if(ctx->bytes == ctx->curent_bytes)
     {
+        //  bpf_printk("NOTIFY host_offset is %lx,offset is %ld, cur_bytes is %u,  qiov_offset is %lx\n",\
+        // ctx->host_offset,ctx->offset,ctx->curent_bytes,ctx->qiov_offset);       
         bpf_map_update_elem(ctx->user_map, &ctx->qiov->id, ctx->user, BPF_ANY);
        	if(ctx->qiov->id < 10000)
-		    ret = bpf_io_uring_submit(ctx->ctxx,ctx->qiov->id,ctx->qiov_offset,ctx->curent_bytes,1);
+		    ret = bpf_io_uring_submit(ctx->ctxx,ctx->qiov->id,ctx->qiov_offset,ctx->curent_bytes,NOTIFY);
     } 
     else
     {
+        // bpf_printk("Slience host_offset is %lx,offset is %ld, cur_bytes is %u,  qiov_offset is %lx\n",\
+        // ctx->host_offset,ctx->offset,ctx->curent_bytes,ctx->qiov_offset);
         if(ctx->qiov->id < 10000)
 		    ret = bpf_io_uring_submit(ctx->ctxx,ctx->qiov->id,ctx->qiov_offset,ctx->curent_bytes,0);
     }
@@ -814,6 +856,6 @@ static __always_inline  int qcow2_co_preadv_part(int64_t offset, int64_t bytes,
     ctx.map = map;
     ctx.user_map = user_map;
     ctx.user = user;
-    bpf_loop(5, preadv_loop, &ctx, 0);
+    bpf_loop(30, preadv_loop, &ctx, 0);
     return ctx.iter;
 }

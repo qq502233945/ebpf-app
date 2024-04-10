@@ -3,6 +3,14 @@
 
 #include <stdbool.h>
 
+// #define DEBUG
+#define RAW
+
+#if defined(DEBUG)
+#define NOTIFY 0
+#else
+#define NOTIFY 1
+#endif
 
 typedef struct AdapterInfo AdapterInfo;
 typedef struct AddressSpace AddressSpace;
@@ -820,6 +828,7 @@ typedef struct Useraddr
     uint32_t vring_num;
     uint32_t wfd;
     uint32_t subreq_num;
+    uint32_t id;
     VRingUsedElem elem;
 } Useraddr;
 
@@ -900,6 +909,7 @@ struct qcow2_co_pwritev_ctx {
     uint64_t L1Cache;
     int64_t L2Cache;
     uint32_t iter;
+    uint32_t need_alloc;
     struct io_uring_bpf_ctx *ctxx;
     void *map;
     void *user_map;
