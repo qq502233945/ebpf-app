@@ -806,18 +806,21 @@ static __always_inline long preadv_loop(uint32_t index,void *ctxx)
 
     if(ctx->bytes == ctx->curent_bytes)
     {
-        //  bpf_printk("NOTIFY host_offset is %lx,offset is %ld, cur_bytes is %u,  qiov_offset is %lx\n",\
-        // ctx->host_offset,ctx->offset,ctx->curent_bytes,ctx->qiov_offset);       
+         bpf_printk("NOTIFY host_offset is %lx,offset is %ld, cur_bytes is %u,  qiov_offset is %lx\n",\
+        ctx->host_offset,ctx->offset,ctx->curent_bytes,ctx->qiov_offset);       
         bpf_map_update_elem(ctx->user_map, &ctx->qiov->id, ctx->user, BPF_ANY);
        	if(ctx->qiov->id < 10000)
 		    ret = bpf_io_uring_submit(ctx->ctxx,ctx->qiov->id,ctx->qiov_offset,ctx->curent_bytes,NOTIFY);
+        bpf_printk("submit ret is %d\n",ret);
+            
     } 
     else
     {
-        // bpf_printk("Slience host_offset is %lx,offset is %ld, cur_bytes is %u,  qiov_offset is %lx\n",\
-        // ctx->host_offset,ctx->offset,ctx->curent_bytes,ctx->qiov_offset);
+        bpf_printk("Slience host_offset is %lx,offset is %ld, cur_bytes is %u,  qiov_offset is %lx\n",\
+        ctx->host_offset,ctx->offset,ctx->curent_bytes,ctx->qiov_offset);
         if(ctx->qiov->id < 10000)
 		    ret = bpf_io_uring_submit(ctx->ctxx,ctx->qiov->id,ctx->qiov_offset,ctx->curent_bytes,0);
+         bpf_printk("submit ret is %d\n",ret);
     }
 
 	// 	bpf_printk("bpf_io_uring_submit ret is %d\n",ret);

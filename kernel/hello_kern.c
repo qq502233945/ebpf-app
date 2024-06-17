@@ -250,6 +250,16 @@ struct
 	__uint(max_entries, 256 * 8);
 } Sqes SEC(".maps");
 
+struct
+{
+	__uint(type, BPF_MAP_TYPE_ARRAY);
+	__type(key, uint32_t);
+	__type(value, flush_lock);
+	__uint(max_entries, 1);
+} flush_map SEC(".maps");
+
+// BPF_ANNOTATE_KV_PAIR(flush_map, uint32_t, struct flush_lock);
+
 static inline void barrier_bpf()
 {
 	asm volatile("" : : : "memory");
@@ -815,9 +825,8 @@ static void vring_set_avail_event_pre(int num,  __u64 vq_addr)
 	pa = offsetof(VRingUsed, ring[vq->vring.num]);
 
 	avail->vring_used = avail->vring_used+ pa;
-
-
 }
+
 static void addr_write(__u64 addr,uint16_t num)
 {
 	#if !defined(DEBUG)
@@ -1011,6 +1020,7 @@ static int virtqueue_split_pop(uint32_t index, void *ctxx)
 	struct virtio_blk_outhdr *req_out;
 	struct vec_pop_ctx pop_ctx;
 	struct Useraddr *avail;
+	struct flush_lock *flock;
 	struct io_uring_bpf_ctx *ctxxx = (struct io_uring_bpf_ctx *)ctxx;
 	if(ctxx==NULL)
 		goto error;
@@ -1194,7 +1204,7 @@ static int virtqueue_split_pop(uint32_t index, void *ctxx)
 	user->elem.len = iov_size(&result->iovec[1],out_num+in_num-1)-1;
 	user->wfd = vq->guest_notifier.wfd;
 	user->subreq_num = 0;
-	// bpf_printk("result->id is %u,result->typeis %u, elem.id %u,elem.len is %u,iov count is %u\n",result->id,result->type,user->elem.id ,user->elem.len,out_num+in_num);
+	bpf_printk("result->id is %u,result->typeis %u, elem.id %u,elem.len is %u,iov count is %u\n",result->id,result->type,user->elem.id ,user->elem.len,out_num+in_num);
 	bpf_map_update_elem(&User_addr_map, &num, user, BPF_ANY);
 
 	
@@ -1207,7 +1217,7 @@ static int virtqueue_split_pop(uint32_t index, void *ctxx)
 	
 	// bpf_printk("result->offset is %lx, request len is %d\n",result->offset,user->elem.len);
 	// vq_id = result->id;
-	// result->fd = 0XFFFF;
+	result->fd = 0;
 	// if(result->type==0)
 	// {
 	// 	uint64_t host_offset;
@@ -1222,8 +1232,8 @@ static int virtqueue_split_pop(uint32_t index, void *ctxx)
 
 	bpf_map_update_elem(&fast_map_d, &num, result, BPF_ANY);
 	avail = bpf_map_lookup_elem(&avail_addr_map, &vq_id);
-		if(avail==NULL)
-			return 0;
+	if(avail==NULL)
+		return 0;
 	if(result->type==1)
 	{
 
@@ -1258,6 +1268,18 @@ static int virtqueue_split_pop(uint32_t index, void *ctxx)
 		
 		last_avail_idx -= 1;
 		ret = bpf_uring_write_user(user->last_avail_idx, &last_avail_idx, sizeof(uint16_t));
+		flock = bpf_map_lookup_elem(&flush_map, &num);
+		if(flock == NULL)
+		{
+			bpf_printk("look flush flush error!");
+			goto error;
+		}
+		bpf_spin_lock(&flock->lock);
+		 
+		flock->flush += 1;
+
+		bpf_spin_unlock(&flock->lock);
+		bpf_printk("set flush");
 		goto error;
 		// #ifdef RAW
 		// 	addr_write(avail->vring_used,vq->last_avail_idx);
@@ -1306,12 +1328,12 @@ int bpf_prog(struct io_uring_bpf_ctx *ctx)
 	uint32_t vq_id=0;
 	vq_id = ctx->vq_num;
 	struct VirtQueue *vq;
-
-
+	uint32_t num = 0;
+	struct flush_lock *flock;
 	
-	if(ctx->begin>0)
+	if(ctx->begin>100)
 	{
-		bpf_printk("ctx->begin is %u\n",ctx->begin);
+		// bpf_printk("ctx->begin is %u\n",ctx->begin);
 		return 0;
 	}
 	//  return 0;
@@ -1320,8 +1342,18 @@ int bpf_prog(struct io_uring_bpf_ctx *ctx)
 	req_pop_ctx = bpf_map_lookup_elem(&req_pop, &vq_id);
 	if(req_pop_ctx == NULL)
 		return 0;
-	 
-	
+	flock = bpf_map_lookup_elem(&flush_map, &num);
+	if(flock == NULL)
+		return 0;
+	bpf_spin_lock(&flock->lock);
+
+	num = flock->flush;
+	bpf_spin_unlock(&flock->lock);
+	if(num > 0)
+	{
+		ctx->qemu_router = 0;
+		goto error;
+	}
 	// router = bpf_map_lookup_elem(&Router, &vq_id);
 	// if(router == NULL)
 	// 	return 0;

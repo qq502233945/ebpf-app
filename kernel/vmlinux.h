@@ -4,7 +4,7 @@
 #include <stdbool.h>
 
 // #define DEBUG
-#define RAW
+// #define RAW
 
 #if defined(DEBUG)
 #define NOTIFY 0
@@ -135,7 +135,7 @@ typedef struct RAMBlockNotifier RAMBlockNotifier;
 
 typedef struct VRMRCS VRMRCS; //352
 
-
+typedef struct flush_lock flush_lock;
 
 
 typedef struct GSList GSList;
@@ -147,7 +147,19 @@ typedef struct NamedClockList NamedClockList;
 typedef struct NamedGPIOList NamedGPIOList;
 
 
+struct flush_lock {
+	struct bpf_spin_lock lock;
+	__u32 flush;
+};
 
+#define BPF_ANNOTATE_KV_PAIR(name, type_key, type_val)      \
+        struct ____btf_map_##name {             \
+                    type_key key;                   \
+                    type_val value;                 \
+                };                          \
+        struct ____btf_map_##name               \
+            __attribute__ ((section(".maps." #name), used))     \
+            ____btf_map_##name = { }
 
 
 enum {
