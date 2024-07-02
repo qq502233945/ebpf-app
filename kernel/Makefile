@@ -1,4 +1,18 @@
-APPS = hello
+
+ifndef FORMAT  
+$(error FORMAT variable is not set. Please run 'make FORMAT=raw' or 'make FORMAT=qcow2')  
+endif  
+
+# 根据FORMAT变量的值，设置相应的编译选项  
+ifeq ($(FORMAT), raw)  
+CFLAGS += -DRAW  
+else ifeq ($(FORMAT), qcow2)  
+CFLAGS += -DQCOW2  
+else  
+$(error Invalid FORMAT value. Please use 'raw' or 'qcow2'.)  
+endif  
+
+APPS = virtio
 
 .PHONY: all
 all: $(APPS)
@@ -37,6 +51,7 @@ $(USER_OBJECTS): %.o: %.c
 $(KERN_OBJECTS): %.o: %.c
 	clang -g -O2 \
 		-target bpf \
+		$(CFLAGS) \
 		-c $< -o $@ \
 		-D__TARGET_ARCH_x86 \
 		-D__KERNEL__ -D__ASM_SYSREG_H \

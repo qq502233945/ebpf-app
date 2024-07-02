@@ -831,17 +831,18 @@ typedef struct Useraddr
 {
     uint64_t used_idx;
     uint64_t last_avail_idx;
-    uint64_t caches_used;
+    // uint64_t caches_used;
     uint64_t vring_used;
-    uint64_t avail_idx;
+    // uint64_t avail_idx;
     uint64_t vdev_isr;
-    uint64_t shadow_avail_idx;
-    uint64_t pa;
-    uint32_t vring_num;
+    // uint64_t shadow_avail_idx;
+    // uint64_t pa;
+    // uint32_t vring_num;
     uint32_t wfd;
     uint32_t subreq_num;
     uint32_t id;
     VRingUsedElem elem;
+    bool used;
 } Useraddr;
 
 struct host_extent_status {
